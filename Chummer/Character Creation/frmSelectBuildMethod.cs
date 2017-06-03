@@ -66,11 +66,13 @@ namespace Chummer
 	        lstBuildMethod.Add(objPriority);
             lstBuildMethod.Add(objKarma);
             lstBuildMethod.Add(objSumtoTen);
-            cboBuildMethod.DataSource = lstBuildMethod;
+            cboBuildMethod.BeginUpdate();
             cboBuildMethod.ValueMember = "Value";
             cboBuildMethod.DisplayMember = "Name";
+            cboBuildMethod.DataSource = lstBuildMethod;
 
             cboBuildMethod.SelectedValue = _objOptions.BuildMethod;
+            cboBuildMethod.EndUpdate();
             nudKarma.Value = _objOptions.BuildPoints;
             nudMaxAvail.Value = _objOptions.Availability;
 	        
@@ -80,18 +82,14 @@ namespace Chummer
 			XmlDocument objXmlDocumentGameplayOptions = XmlManager.Instance.Load("gameplayoptions.xml");
 
             // Populate the Gameplay Options list.
-            string strDefault = "";
+            string strDefault = string.Empty;
             XmlNodeList objXmlGameplayOptionList = objXmlDocumentGameplayOptions.SelectNodes("/chummer/gameplayoptions/gameplayoption");
 			
 			foreach (XmlNode objXmlGameplayOption in objXmlGameplayOptionList)
             {
                 string strName = objXmlGameplayOption["name"].InnerText;
-                try
-                {
-                    if (objXmlGameplayOption["default"].InnerText == "yes")
-                        strDefault = strName;
-                }
-                catch { }
+                if (objXmlGameplayOption["default"]?.InnerText == "yes")
+                    strDefault = strName;
                 ListItem lstGameplay = new ListItem();
                 cboGamePlay.Items.Add(strName);
             }
@@ -117,7 +115,7 @@ namespace Chummer
 	        switch (cboBuildMethod.SelectedValue.ToString())
 	        {
 				case "Karma":
-					_objCharacter.NuyenMaximumBP = 200;
+					_objCharacter.NuyenMaximumBP = Convert.ToInt32(nudMaxNuyen.Value);
 					_objCharacter.BuildMethod = CharacterBuildMethod.Karma;
 					break;
 				case "Priority":
@@ -130,7 +128,7 @@ namespace Chummer
 					_objCharacter.SumtoTen = Convert.ToInt32(nudSumtoTen.Value);
 			        break;
 				case "LifeModule":
-					_objCharacter.NuyenMaximumBP = 200;
+					_objCharacter.NuyenMaximumBP = Convert.ToInt32(nudMaxNuyen.Value);
 					_objCharacter.BuildMethod = CharacterBuildMethod.LifeModule;
 			        break;
 	        }
@@ -140,13 +138,13 @@ namespace Chummer
 			_objCharacter.GameplayOptionQualityLimit = intQualityLimits;
             _objCharacter.IgnoreRules = chkIgnoreRules.Checked;
             _objCharacter.MaximumAvailability = Convert.ToInt32(nudMaxAvail.Value);
-            this.DialogResult = DialogResult.OK;
+            DialogResult = DialogResult.OK;
         }
 
         private void cmdCancel_Click(object sender, EventArgs e)
         {
-            this.DialogResult = DialogResult.Cancel;
-            this.Close();
+            DialogResult = DialogResult.Cancel;
+            Close();
         }
 
         private void cboBuildMethod_SelectedIndexChanged(object sender, EventArgs e)
@@ -169,44 +167,47 @@ namespace Chummer
                     else
                     {
                         lblDescription.Text = LanguageManager.Instance.GetString("String_SelectBP_KarmaSummary").Replace("{0}", "800");
-                        if (!_blnUseCurrentValues)
+						if (!_blnUseCurrentValues)
                             nudKarma.Value = 800;
-                    }
-                    nudKarma.Visible = true;
+					}
+					nudMaxNuyen.Visible = true;
+					nudKarma.Visible = true;
 					nudSumtoTen.Visible = false;
                 }
                 else if (cboBuildMethod.SelectedValue.ToString() == "Priority")
                 {
                     lblDescription.Text = LanguageManager.Instance.GetString("String_SelectBP_PrioritySummary");
                     nudKarma.Visible = false;
+					nudMaxNuyen.Visible = false;
 					nudSumtoTen.Visible = false;
                 }
                 else if (cboBuildMethod.SelectedValue.ToString() == "SumtoTen")
                 {
                     lblDescription.Text = LanguageManager.Instance.GetString("String_SelectBP_PrioritySummary");
 	                nudKarma.Visible = false;
-	                nudSumtoTen.Visible = true;
+					nudMaxNuyen.Visible = false;
+					nudSumtoTen.Visible = true;
                 }
                 else if (cboBuildMethod.SelectedValue.ToString() == "LifeModule")
                 {
                     lblDescription.Text =
                         String.Format(LanguageManager.Instance.GetString("String_SelectBP_LifeModuleSummary"), 750);
                     nudKarma.Visible = true;
+					nudMaxNuyen.Visible = true;
 					nudSumtoTen.Visible = false;
-					
 
 					if (!_blnUseCurrentValues)
                         nudKarma.Value = 750;
                 }
-
 				lblStartingKarma.Visible = nudKarma.Visible;
 				lblSumToX.Visible = nudSumtoTen.Visible;
+				lblMaxNuyen.Visible = nudMaxNuyen.Visible;
 			}
         }
 
         private void frmSelectBuildMethod_Load(object sender, EventArgs e)
         {
-            this.Height = cmdOK.Bottom + 40;
+            Height = cmdOK.Bottom + 40;
             cboBuildMethod_SelectedIndexChanged(this, e);
         }
         #endregion

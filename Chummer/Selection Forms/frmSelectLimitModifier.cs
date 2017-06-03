@@ -29,34 +29,40 @@ namespace Chummer
 {
     public partial class frmSelectLimitModifier : Form
     {
-        private string _strReturnName = "";
+        private string _strReturnName = string.Empty;
         private int _intBonus = 1;
-        private string _strCondition = "";
+        private string _strCondition = string.Empty;
 
         #region Control Events
-        public frmSelectLimitModifier()
+        public frmSelectLimitModifier(LimitModifier objLimitModifier = null)
         {
             InitializeComponent();
             LanguageManager.Instance.Load(GlobalOptions.Instance.Language, this);
-        }
+			if (objLimitModifier != null)
+			{
+				txtName.Text = objLimitModifier.Name;
+				_intBonus = objLimitModifier.Bonus;
+				txtCondition.Text = objLimitModifier.Condition;
+			}
+		}
 
 		private void cmdOK_Click(object sender, EventArgs e)
         {
             _strReturnName = txtName.Text;
             _intBonus = Convert.ToInt32(nudBonus.Value);
             _strCondition = txtCondition.Text;
-            this.DialogResult = DialogResult.OK;
+            DialogResult = DialogResult.OK;
         }
 
         private void cmdCancel_Click(object sender, EventArgs e)
         {
-            this.DialogResult = DialogResult.Cancel;
+            DialogResult = DialogResult.Cancel;
         }
 
 		private void frmSelectText_Shown(object sender, EventArgs e)
 		{
 			// If the field is pre-populated, immediately click OK.
-			if (txtName.Text != "")
+			if (!string.IsNullOrEmpty(txtName.Text))
 				cmdOK_Click(sender, e);
 		}		
 		#endregion

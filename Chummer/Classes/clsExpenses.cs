@@ -18,6 +18,7 @@
  */
 ﻿using System;
 using System.Xml;
+using Chummer.Backend;
 
 namespace Chummer
 {
@@ -54,7 +55,11 @@ namespace Chummer
 		QuickeningMetamagic = 22,
         AddPowerPoint = 23,
         AddSpecialization = 24,
-	}
+        AddAIProgram = 25,
+        AddAIAdvancedProgram = 26,
+        AddCritterPower = 27,
+        SpiritFettering = 28
+    }
 
 	public enum NuyenExpenseType
 	{
@@ -90,7 +95,7 @@ namespace Chummer
 		private NuyenExpenseType _objNuyenExpenseType;
 		private string _strObjectId;
 		private int _intQty = 0;
-		private string _strExtra = "";
+		private string _strExtra = string.Empty;
 
 		#region Helper Methods
 		/// <summary>
@@ -99,57 +104,8 @@ namespace Chummer
 		/// <param name="strValue">String value to convert.</param>
 		public KarmaExpenseType ConvertToKarmaExpenseType(string strValue)
 		{
-			switch (strValue)
-			{
-				case "AddComplexForm":
-					return KarmaExpenseType.AddComplexForm;
-				case "AddComplexFormOption":
-					return KarmaExpenseType.AddComplexFormOption;
-				case "AddMartialArt":
-					return KarmaExpenseType.AddMartialArt;
-				case "AddMartialArtManeuver":
-					return KarmaExpenseType.AddMartialArtManeuver;
-				case "AddMetamagic":
-					return KarmaExpenseType.AddMetamagic;
-				case "AddQuality":
-					return KarmaExpenseType.AddQuality;
-				case "AddSkill":
-					return KarmaExpenseType.AddSkill;
-                case "AddSpecialization":
-                    return KarmaExpenseType.AddSpecialization;
-                case "AddSpell":
-					return KarmaExpenseType.AddSpell;
-				case "BindFocus":
-					return KarmaExpenseType.BindFocus;
-				case "ImproveAttribute":
-					return KarmaExpenseType.ImproveAttribute;
-				case "ImproveComplexForm":
-					return KarmaExpenseType.ImproveComplexForm;
-				case "ImproveComplexFormOption":
-					return KarmaExpenseType.ImproveComplexFormOption;
-				case "ImproveInitiateGrade":
-					return KarmaExpenseType.ImproveInitiateGrade;
-				case "ImproveMartialArt":
-					return KarmaExpenseType.ImproveMartialArt;
-				case "ImproveSkill":
-					return KarmaExpenseType.ImproveSkill;
-				case "ImproveSkillGroup":
-					return KarmaExpenseType.ImproveSkillGroup;
-				case "ManualAdd":
-					return KarmaExpenseType.ManualAdd;
-				case "ManualSubtract":
-					return KarmaExpenseType.ManualSubtract;
-				case "RemoveQuality":
-					return KarmaExpenseType.RemoveQuality;
-				case "SkillSpec":
-					return KarmaExpenseType.SkillSpec;
-				case "JoinGroup":
-					return KarmaExpenseType.JoinGroup;
-				case "LeaveGroup":
-					return KarmaExpenseType.LeaveGroup;
-				default:
-					return KarmaExpenseType.ManualAdd;
-			}
+			KarmaExpenseType result;
+			return Enum.TryParse(strValue, out result) ? result : KarmaExpenseType.ManualAdd;
 		}
 
 		/// <summary>
@@ -158,51 +114,8 @@ namespace Chummer
 		/// <param name="strValue">String value to convert.</param>
 		public NuyenExpenseType ConvertToNuyenExpenseType(string strValue)
 		{
-			switch (strValue)
-			{
-				case "AddArmor":
-					return NuyenExpenseType.AddArmor;
-				case "AddArmorGear":
-					return NuyenExpenseType.AddArmorGear;
-				case "AddArmorMod":
-					return NuyenExpenseType.AddArmorMod;
-				case "AddCyberware":
-					return NuyenExpenseType.AddCyberware;
-				case "AddGear":
-					return NuyenExpenseType.AddGear;
-				case "AddVehicle":
-					return NuyenExpenseType.AddVehicle;
-				case "AddVehicleGear":
-					return NuyenExpenseType.AddVehicleGear;
-				case "AddVehicleMod":
-					return NuyenExpenseType.AddVehicleMod;
-				case "AddVehicleWeapon":
-					return NuyenExpenseType.AddVehicleWeapon;
-				case "AddVehicleWeaponAccessory":
-					return NuyenExpenseType.AddVehicleWeaponAccessory;
-				case "AddVehicleWeaponMod":
-					return NuyenExpenseType.AddVehicleWeaponMod;
-				case "AddWeapon":
-					return NuyenExpenseType.AddWeapon;
-				case "AddWeaponAccessory":
-					return NuyenExpenseType.AddWeaponAccessory;
-				case "AddWeaponMod":
-					return NuyenExpenseType.AddWeaponMod;
-				case "IncreaseLifestyle":
-					return NuyenExpenseType.IncreaseLifestyle;
-				case "ManualAdd":
-					return NuyenExpenseType.ManualAdd;
-				case "ManualSubtract":
-					return NuyenExpenseType.ManualSubtract;
-				case "AddVehicleModCyberware":
-					return NuyenExpenseType.AddVehicleModCyberware;
-				case "AddCyberwareGear":
-					return NuyenExpenseType.AddCyberwareGear;
-				case "AddWeaponGear":
-					return NuyenExpenseType.AddWeaponGear;
-				default:
-					return NuyenExpenseType.ManualAdd;
-			}
+			NuyenExpenseType result;
+			return Enum.TryParse(strValue, out result) ? result : NuyenExpenseType.ManualAdd;
 		}
 		#endregion
 
@@ -212,10 +125,12 @@ namespace Chummer
 		/// </summary>
 		/// <param name="objExpenseType">Karma expense type.</param>
 		/// <param name="strObjectId">Object identifier.</param>
-		public void CreateKarma(KarmaExpenseType objExpenseType, string strObjectId)
+		public ExpenseUndo CreateKarma(KarmaExpenseType objExpenseType, string strObjectId)
 		{
 			_objKarmaExpenseType = objExpenseType;
 			_strObjectId = strObjectId;
+
+			return this;
 		}
 
 		/// <summary>
@@ -224,11 +139,13 @@ namespace Chummer
 		/// <param name="objExpenseType">Nuyen expense type.</param>
 		/// <param name="strObjectId">Object identifier.</param>
 		/// <param name="intQty">Amount of Nuyen.</param>
-		public void CreateNuyen(NuyenExpenseType objExpenseType, string strObjectId, int intQty = 0)
+		public ExpenseUndo CreateNuyen(NuyenExpenseType objExpenseType, string strObjectId, int intQty = 0)
 		{
 			_objNuyenExpenseType = objExpenseType;
 			_strObjectId = strObjectId;
 			_intQty = intQty;
+
+			return this;
 		}
 
 		/// <summary>
@@ -252,11 +169,15 @@ namespace Chummer
 		/// <param name="objNode">XmlNode to load.</param>
 		public void Load(XmlNode objNode)
 		{
-			_objKarmaExpenseType = ConvertToKarmaExpenseType(objNode["karmatype"].InnerText);
-			_objNuyenExpenseType = ConvertToNuyenExpenseType(objNode["nuyentype"].InnerText);
-			_strObjectId = objNode["objectid"].InnerText;
-			_intQty = Convert.ToInt32(objNode["qty"].InnerText);
-			_strExtra = objNode["extra"].InnerText;
+            if (objNode == null)
+                return;
+            if (objNode["karmatype"] != null)
+			    _objKarmaExpenseType = ConvertToKarmaExpenseType(objNode["karmatype"].InnerText);
+            if (objNode["nuyentype"] != null)
+                _objNuyenExpenseType = ConvertToNuyenExpenseType(objNode["nuyentype"].InnerText);
+            objNode.TryGetStringFieldQuickly("objectid", ref _strObjectId);
+            objNode.TryGetInt32FieldQuickly("qty", ref _intQty);
+            objNode.TryGetStringFieldQuickly("extra", ref _strExtra);
 		}
 		
 		#endregion
@@ -347,7 +268,7 @@ namespace Chummer
 		private Guid _guiID = new Guid();
 		private DateTime _datDate = new DateTime();
 		private int _intAmount = 0;
-		private string _strReason = "";
+		private string _strReason = string.Empty;
 		private ExpenseType _objExpenseType;
 		private bool _blnRefund = false;
 		private ExpenseUndo _objUndo;
@@ -408,7 +329,7 @@ namespace Chummer
 		/// <param name="objExpenseType">Type of expense, either Karma or Nuyen.</param>
 		/// <param name="datDate">Date and time of the Expense.</param>
 		/// <param name="blnRefund">Whether or not this expense is a Karma refund.</param>
-		public void Create(int intKarma, string strReason, ExpenseType objExpenseType, DateTime datDate, bool blnRefund = false)
+		public ExpenseLogEntry Create(int intKarma, string strReason, ExpenseType objExpenseType, DateTime datDate, bool blnRefund = false)
 		{
 			if (blnRefund)
 				strReason += " (" + LanguageManager.Instance.GetString("String_Expense_Refund") + ")";
@@ -417,6 +338,8 @@ namespace Chummer
 			_datDate = datDate;
 			_objExpenseType = objExpenseType;
 			_blnRefund = blnRefund;
+
+			return this;  //Allow chaining
 		}
 
 		/// <summary>
@@ -444,29 +367,19 @@ namespace Chummer
 		public void Load(XmlNode objNode)
 		{
 			_guiID = Guid.Parse(objNode["guid"].InnerText);
-			_datDate = DateTime.Parse(objNode["date"].InnerText, GlobalOptions.Instance.CultureInfo);
-			_intAmount = Convert.ToInt32(objNode["amount"].InnerText);
-			_strReason = objNode["reason"].InnerText;
-			_objExpenseType = ConvertToExpenseType(objNode["type"].InnerText);
-			try
-			{
-				_blnRefund = Convert.ToBoolean(objNode["refund"].InnerText);
-			}
-			catch
-			{
-			}
-			try
-			{
-				if (objNode["undo"] != null)
-				{
-					_objUndo = new ExpenseUndo();
-					_objUndo.Load(objNode["undo"]);
-				}
-			}
-			catch
-			{
-			}
-		}
+			_datDate = DateTime.Parse(objNode["date"]?.InnerText, GlobalOptions.InvariantCultureInfo);
+            objNode.TryGetInt32FieldQuickly("amount", ref _intAmount);
+            objNode.TryGetStringFieldQuickly("reason", ref _strReason);
+            if (objNode["type"] != null)
+			    _objExpenseType = ConvertToExpenseType(objNode["type"].InnerText);
+            objNode.TryGetBoolFieldQuickly("refund", ref _blnRefund);
+
+            if (objNode["undo"] != null)
+            {
+                _objUndo = new ExpenseUndo();
+                _objUndo.Load(objNode["undo"]);
+            }
+        }
 
 		/// <summary>
 		/// Print the object's XML to the XmlWriter.
@@ -475,7 +388,7 @@ namespace Chummer
 		public void Print(XmlTextWriter objWriter)
 		{
 			objWriter.WriteStartElement("expense");
-			objWriter.WriteElementString("date", _datDate.ToString());
+			objWriter.WriteElementString("date", _datDate.ToString(GlobalOptions.InvariantCultureInfo));
 			objWriter.WriteElementString("amount", _intAmount.ToString());
 			objWriter.WriteElementString("reason", _strReason);
 			objWriter.WriteElementString("type", _objExpenseType.ToString());

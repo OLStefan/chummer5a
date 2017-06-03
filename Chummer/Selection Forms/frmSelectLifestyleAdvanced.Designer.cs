@@ -28,10 +28,10 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-            this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.TreeNode treeNode7 = new System.Windows.Forms.TreeNode("Positive Qualities");
-            System.Windows.Forms.TreeNode treeNode8 = new System.Windows.Forms.TreeNode("Negative Qualities");
-            System.Windows.Forms.TreeNode treeNode9 = new System.Windows.Forms.TreeNode("Entertainments");
+            System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("Positive Qualities");
+            System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("Negative Qualities");
+            System.Windows.Forms.TreeNode treeNode3 = new System.Windows.Forms.TreeNode("Entertainments");
+            System.Windows.Forms.TreeNode treeNode4 = new System.Windows.Forms.TreeNode("Free Matrix Grids");
             this.Label_SelectAdvancedLifestyle_Upgrade_Comforts = new System.Windows.Forms.Label();
             this.cmdOKAdd = new System.Windows.Forms.Button();
             this.cmdCancel = new System.Windows.Forms.Button();
@@ -48,7 +48,7 @@
             this.lblSourceLabel = new System.Windows.Forms.Label();
             this.nudRoommates = new System.Windows.Forms.NumericUpDown();
             this.lblRoommates = new System.Windows.Forms.Label();
-            this.tipTooltip = new System.Windows.Forms.ToolTip(this.components);
+            this.tipTooltip = new TheArtOfDev.HtmlRenderer.WinForms.HtmlToolTip();
             this.cboBaseLifestyle = new System.Windows.Forms.ComboBox();
             this.Label_SelectAdvancedLifestyle_Base_Lifestyle = new System.Windows.Forms.Label();
             this.nudSecurity = new System.Windows.Forms.NumericUpDown();
@@ -65,6 +65,8 @@
             this.lblQualityBPLabel = new System.Windows.Forms.Label();
             this.lblQualitySource = new System.Windows.Forms.Label();
             this.lblQualitySourceLabel = new System.Windows.Forms.Label();
+            this.lblQualityCost = new System.Windows.Forms.Label();
+            this.lblQualityCostLabel = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.nudPercentage)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudRoommates)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudSecurity)).BeginInit();
@@ -121,15 +123,15 @@
             this.lblTotalLPLabel.AutoSize = true;
             this.lblTotalLPLabel.Location = new System.Drawing.Point(256, 226);
             this.lblTotalLPLabel.Name = "lblTotalLPLabel";
-            this.lblTotalLPLabel.Size = new System.Drawing.Size(50, 13);
+            this.lblTotalLPLabel.Size = new System.Drawing.Size(63, 13);
             this.lblTotalLPLabel.TabIndex = 12;
-            this.lblTotalLPLabel.Tag = "Label_SelectAdvancedLifestyle_TotalLP";
-            this.lblTotalLPLabel.Text = "Total LP:";
+            this.lblTotalLPLabel.Tag = "Label_SelectAdvancedLifestyle_UnusedLP";
+            this.lblTotalLPLabel.Text = "Unused LP:";
             // 
             // lblTotalLP
             // 
             this.lblTotalLP.AutoSize = true;
-            this.lblTotalLP.Location = new System.Drawing.Point(321, 226);
+            this.lblTotalLP.Location = new System.Drawing.Point(331, 226);
             this.lblTotalLP.Name = "lblTotalLP";
             this.lblTotalLP.Size = new System.Drawing.Size(26, 13);
             this.lblTotalLP.TabIndex = 13;
@@ -244,10 +246,15 @@
             // 
             // tipTooltip
             // 
+            this.tipTooltip.AllowLinksHandling = true;
             this.tipTooltip.AutoPopDelay = 10000;
+            this.tipTooltip.BaseStylesheet = null;
             this.tipTooltip.InitialDelay = 250;
             this.tipTooltip.IsBalloon = true;
+            this.tipTooltip.MaximumSize = new System.Drawing.Size(0, 0);
+            this.tipTooltip.OwnerDraw = true;
             this.tipTooltip.ReshowDelay = 100;
+            this.tipTooltip.TooltipCssClass = "htmltooltip";
             this.tipTooltip.ToolTipIcon = System.Windows.Forms.ToolTipIcon.Info;
             this.tipTooltip.ToolTipTitle = "Chummer Help";
             // 
@@ -368,16 +375,22 @@
             // 
             this.treLifestyleQualities.Location = new System.Drawing.Point(1, 36);
             this.treLifestyleQualities.Name = "treLifestyleQualities";
-            treeNode7.Name = "nodPositiveLifestyleQualities";
-            treeNode7.Text = "Positive Qualities";
-            treeNode8.Name = "nodNegativeLifestyleQualities";
-            treeNode8.Text = "Negative Qualities";
-            treeNode9.Name = "nodLifestyleEntertainments";
-            treeNode9.Text = "Entertainments";
+            treeNode1.Name = "nodPositiveLifestyleQualities";
+            treeNode1.Tag = "Label_SummaryPositiveQualities";
+            treeNode1.Text = "Positive Qualities";
+            treeNode2.Name = "nodNegativeLifestyleQualities";
+            treeNode2.Tag = "Label_SummaryNegativeQualities";
+            treeNode2.Text = "Negative Qualities";
+            treeNode3.Name = "nodLifestyleEntertainments";
+            treeNode3.Tag = "Node_SelectAdvancedLifestyle_Entertainments";
+            treeNode3.Text = "Entertainments";
+            treeNode4.Name = "nodFreeMatrixGrids";
+            treeNode4.Text = "Free Matrix Grids";
             this.treLifestyleQualities.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
-            treeNode7,
-            treeNode8,
-            treeNode9});
+            treeNode1,
+            treeNode2,
+            treeNode3,
+            treeNode4});
             this.treLifestyleQualities.Size = new System.Drawing.Size(249, 286);
             this.treLifestyleQualities.TabIndex = 53;
             this.treLifestyleQualities.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treLifestyleQualities_AfterSelect);
@@ -419,7 +432,7 @@
             // 
             this.lblQualitySource.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lblQualitySource.AutoSize = true;
-            this.lblQualitySource.Location = new System.Drawing.Point(185, 325);
+            this.lblQualitySource.Location = new System.Drawing.Point(204, 325);
             this.lblQualitySource.Name = "lblQualitySource";
             this.lblQualitySource.Size = new System.Drawing.Size(47, 13);
             this.lblQualitySource.TabIndex = 69;
@@ -430,12 +443,33 @@
             // 
             this.lblQualitySourceLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lblQualitySourceLabel.AutoSize = true;
-            this.lblQualitySourceLabel.Location = new System.Drawing.Point(135, 325);
+            this.lblQualitySourceLabel.Location = new System.Drawing.Point(154, 325);
             this.lblQualitySourceLabel.Name = "lblQualitySourceLabel";
             this.lblQualitySourceLabel.Size = new System.Drawing.Size(44, 13);
             this.lblQualitySourceLabel.TabIndex = 68;
             this.lblQualitySourceLabel.Tag = "Label_Source";
             this.lblQualitySourceLabel.Text = "Source:";
+            // 
+            // lblQualityCost
+            // 
+            this.lblQualityCost.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.lblQualityCost.AutoSize = true;
+            this.lblQualityCost.Location = new System.Drawing.Point(111, 325);
+            this.lblQualityCost.Name = "lblQualityCost";
+            this.lblQualityCost.Size = new System.Drawing.Size(34, 13);
+            this.lblQualityCost.TabIndex = 73;
+            this.lblQualityCost.Text = "[Cost]";
+            // 
+            // lblQualityCostLabel
+            // 
+            this.lblQualityCostLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.lblQualityCostLabel.AutoSize = true;
+            this.lblQualityCostLabel.Location = new System.Drawing.Point(79, 325);
+            this.lblQualityCostLabel.Name = "lblQualityCostLabel";
+            this.lblQualityCostLabel.Size = new System.Drawing.Size(31, 13);
+            this.lblQualityCostLabel.TabIndex = 72;
+            this.lblQualityCostLabel.Tag = "Label_Cost";
+            this.lblQualityCostLabel.Text = "Cost:";
             // 
             // frmSelectLifestyleAdvanced
             // 
@@ -444,6 +478,8 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.cmdCancel;
             this.ClientSize = new System.Drawing.Size(572, 342);
+            this.Controls.Add(this.lblQualityCost);
+            this.Controls.Add(this.lblQualityCostLabel);
             this.Controls.Add(this.lblQualityLp);
             this.Controls.Add(this.lblQualityBPLabel);
             this.Controls.Add(this.lblQualitySource);
@@ -543,7 +579,7 @@
 		private System.Windows.Forms.Label lblSourceLabel;
 		private System.Windows.Forms.NumericUpDown nudRoommates;
 		private System.Windows.Forms.Label lblRoommates;
-        private System.Windows.Forms.ToolTip tipTooltip;
+        private TheArtOfDev.HtmlRenderer.WinForms.HtmlToolTip tipTooltip;
         private System.Windows.Forms.ComboBox cboBaseLifestyle;
         private System.Windows.Forms.Label Label_SelectAdvancedLifestyle_Base_Lifestyle;
         private System.Windows.Forms.NumericUpDown nudSecurity;
@@ -560,5 +596,7 @@
         private System.Windows.Forms.Label lblQualityBPLabel;
         private System.Windows.Forms.Label lblQualitySource;
         private System.Windows.Forms.Label lblQualitySourceLabel;
+        private System.Windows.Forms.Label lblQualityCost;
+        private System.Windows.Forms.Label lblQualityCostLabel;
     }
 }

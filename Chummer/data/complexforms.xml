@@ -18,7 +18,7 @@
     https://github.com/chummer5a/chummer5a
 -->
 <chummer>
-  <version>-395</version>
+  <version>0</version>
   <complexforms>
     <complexform>
       <id>373638b9-4334-4645-99f5-c3673e4f809b</id>
@@ -196,6 +196,15 @@
       <fv>L+2</fv>
       <source>DT</source>
       <page>58</page>
+    </complexform>
+	<complexform>
+      <id>f9a63582-6858-4b83-a76f-6daa52b127c5</id>
+      <name>Coriolis</name>
+      <target>Persona</target>
+      <duration>E</duration>
+      <fv>L+3</fv>
+      <source>CF</source>
+      <page>25</page>
     </complexform>    
   </complexforms>
 </chummer>

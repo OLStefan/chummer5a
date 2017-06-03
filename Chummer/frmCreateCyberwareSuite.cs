@@ -1,4 +1,4 @@
-/*  This file is part of Chummer5a.
+﻿/*  This file is part of Chummer5a.
  *
  *  Chummer5a is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,11 +16,12 @@
  *  You can obtain the full source code for Chummer5a at
  *  https://github.com/chummer5a/chummer5a
  */
-﻿using System;
+ using System;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml;
+ using Chummer.Backend.Equipment;
 
 namespace Chummer
 {
@@ -43,7 +44,7 @@ namespace Chummer
 			else
 			{
 				_strType = "bioware";
-				this.Text = LanguageManager.Instance.GetString("Title_CreateBiowareSuite");
+				Text = LanguageManager.Instance.GetString("Title_CreateBiowareSuite");
 			}
 
 			txtFileName.Text = "custom_" + _strType + ".xml";
@@ -52,13 +53,13 @@ namespace Chummer
 		private void cmdOK_Click(object sender, EventArgs e)
 		{
 			// Make sure the suite and file name fields are populated.
-			if (txtName.Text == "")
+			if (string.IsNullOrEmpty(txtName.Text))
 			{
 				MessageBox.Show(LanguageManager.Instance.GetString("Message_CyberwareSuite_SuiteName"), LanguageManager.Instance.GetString("MessageTitle_CyberwareSuite_SuiteName"), MessageBoxButtons.OK, MessageBoxIcon.Information);
 				return;
 			}
 
-			if (txtFileName.Text == "")
+			if (string.IsNullOrEmpty(txtFileName.Text))
 			{
 				MessageBox.Show(LanguageManager.Instance.GetString("Message_CyberwareSuite_FileName"), LanguageManager.Instance.GetString("MessageTitle_CyberwareSuite_FileName"), MessageBoxButtons.OK, MessageBoxIcon.Information);
 				return;
@@ -74,7 +75,7 @@ namespace Chummer
 			// See if a Suite with this name already exists for the Custom category. This is done without the XmlManager since we need to check each file individually.
 			XmlDocument objXmlDocument = new XmlDocument();
 			XmlNodeList objXmlSuiteList;
-			string strCustomPath = Path.Combine(Environment.CurrentDirectory, "data");
+			string strCustomPath = Path.Combine(Application.StartupPath, "data");
 			foreach (string strFile in Directory.GetFiles(strCustomPath, "custom*_" + _strType + ".xml"))
 			{
 				objXmlDocument.Load(strFile);
@@ -125,7 +126,7 @@ namespace Chummer
 					objXmlCyberware.WriteContentTo(objWriter);
 			}
 
-			string strGrade = "";
+			string strGrade = string.Empty;
 			// Determine the Grade of Cyberware.
 			foreach (Cyberware objCyberware in _objCharacter.Cyberware)
 			{
@@ -193,18 +194,18 @@ namespace Chummer
 			objStream.Close();
 
 			MessageBox.Show(LanguageManager.Instance.GetString("Message_CyberwareSuite_SuiteCreated").Replace("{0}", txtName.Text), LanguageManager.Instance.GetString("MessageTitle_CyberwareSuite_SuiteCreated"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-			this.DialogResult = DialogResult.OK;
+			DialogResult = DialogResult.OK;
 		}
 
 		private void cmdCancel_Click(object sender, EventArgs e)
 		{
-			this.DialogResult = DialogResult.Cancel;
+			DialogResult = DialogResult.Cancel;
 		}
 
 		private void frmCreateCyberwareSuite_Load(object sender, EventArgs e)
 		{
 			txtName.Left = lblName.Left + lblName.Width + 6;
-			txtName.Width = this.Width - txtName.Left - 19;
+			txtName.Width = Width - txtName.Left - 19;
 			txtFileName.Left = txtName.Left;
 			txtFileName.Width = txtName.Width;
 		}

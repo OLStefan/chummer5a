@@ -19,6 +19,7 @@
 ﻿using System;
 using System.Collections;
 using System.Windows.Forms;
+using System.Xml;
 
 namespace Chummer
 {
@@ -27,6 +28,13 @@ namespace Chummer
 	/// </summary>
 	public class ListItem
 	{
+		public static ListItem AutoXml(string value, XmlNode node)
+		{
+			string display = node.Attributes["translate"]?.InnerText ?? node.InnerText;
+
+			return new ListItem(value, display);
+		}
+
 		public static ListItem Auto(string value, string languageString)
 		{
 			return new ListItem(value, LanguageManager.Instance.GetString(languageString)); 
@@ -43,8 +51,8 @@ namespace Chummer
 			
 		}
 
-		private string _strValue = "";
-		private string _strName = "";
+		private string _strValue = string.Empty;
+		private string _strName = string.Empty;
 
 		/// <summary>
 		/// Value.
@@ -131,8 +139,6 @@ namespace Chummer
 
 		public ListViewColumnSorter()
 		{
-			_intColumnToSort = 0;
-			_objOrderOfSort = SortOrder.None;
 			_objObjectCompare = new CaseInsensitiveComparer();
 		}
 

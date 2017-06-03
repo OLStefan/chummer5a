@@ -1,4 +1,4 @@
-/*  This file is part of Chummer5a.
+﻿/*  This file is part of Chummer5a.
  *
  *  Chummer5a is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,15 +16,14 @@
  *  You can obtain the full source code for Chummer5a at
  *  https://github.com/chummer5a/chummer5a
  */
-﻿using System;
+ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 ﻿using System.Xml;
-﻿using Microsoft.Win32;
-
-// MRUChanged Event Handler.
-public delegate void MRUChangedHandler();
+using System.Windows.Forms;
+ using Chummer.Backend.Equipment;
+ using Microsoft.Win32;
 
 namespace Chummer
 {
@@ -44,8 +43,8 @@ namespace Chummer
 
 	public class SourcebookInfo
 	{
-		string _strCode = "";
-		string _strPath = "";
+		string _strCode = string.Empty;
+		string _strPath = string.Empty;
 		int _intOffset = 0;
 
 		#region Properties
@@ -93,14 +92,17 @@ namespace Chummer
 	public sealed class GlobalOptions
 	{
 		static readonly GlobalOptions _objInstance = new GlobalOptions();
-		static readonly CultureInfo _objCultureInfo = CultureInfo.InvariantCulture;
+		static readonly CultureInfo _objCultureInfo = CultureInfo.CurrentCulture;
+        static readonly CultureInfo _objInvariantCultureInfo = CultureInfo.InvariantCulture;
 
-		public event MRUChangedHandler MRUChanged;
+        public Action MRUChanged;
 
 		private frmMain _frmMainForm;
+        private static readonly RegistryKey _objBaseChummerKey;
 
-		private static bool _blnAutomaticUpdate = false;
-		private static bool _blnLocalisedUpdatesOnly = false;
+        private static bool _blnAutomaticUpdate = false;
+	    private static bool _blnLiveCustomData = false;
+        private static bool _blnLocalisedUpdatesOnly = false;
 		private static bool _blnStartupFullscreen = false;
 		private static bool _blnSingleDiceRoller = true;
 		private static string _strLanguage = "en-us";
@@ -110,207 +112,165 @@ namespace Chummer
 		private static bool _lifeModuleEnabled;
 		private static bool _blnMissionsOnly = false;
 		private static bool _blnDronemods = false;
-
+	    private static bool _blnDronemodsMaximumPilot = false;
+		private static bool _blnPreferNightlyUpdates = false;
 
 		// Omae Information.
-		private static string _strOmaeUserName = "";
-		private static string _strOmaePassword = "";
+		private static bool _omaeEnabled = false;
+		private static string _strOmaeUserName = string.Empty;
+		private static string _strOmaePassword = string.Empty;
 		private static bool _blnOmaeAutoLogin = false;
 
 		private XmlDocument _objXmlClipboard = new XmlDocument();
 		private ClipboardContentType _objClipboardContentType = new ClipboardContentType();
 
-		public static GradeList CyberwareGrades = new GradeList();
-		public static GradeList BiowareGrades = new GradeList();
+		public static readonly GradeList CyberwareGrades = new GradeList();
+		public static readonly GradeList BiowareGrades = new GradeList();
 
-		// PDF information.
-		public static string _strPDFAppPath = "";
-        public static string _strURLAppPath = "";
-		public static List<SourcebookInfo> _lstSourcebookInfo = new List<SourcebookInfo>();
-        public static bool _blnOpenPDFsAsURLs = false;
-        public static bool _blnUseLogging = false;
+        // PDF information.
+        private static string _strPDFAppPath = string.Empty;
+        private static string _strPDFParameters = string.Empty;
+        private static List<SourcebookInfo> _lstSourcebookInfo = new List<SourcebookInfo>();
+        private static bool _blnUseLogging = false;
+		private static string _strCharacterRosterPath;
 
 		#region Constructor and Instance
-		static GlobalOptions()
+		/// <summary>
+		/// Load a Bool Option from the Registry (which will subsequently be converted to the XML Settings File format). Registry keys are deleted once they are read since they will no longer be used.
+		/// </summary>
+		private static void LoadBoolFromRegistry(ref bool blnStorage, string strBoolName, string strSubKey = "")
+        {
+			object objRegistryResult = !string.IsNullOrWhiteSpace(strSubKey) ? _objBaseChummerKey.GetValue(strBoolName) : _objBaseChummerKey.GetValue(strBoolName);
+			if (objRegistryResult != null)
+            {
+                bool blnTemp;
+                if (bool.TryParse(objRegistryResult.ToString(), out blnTemp))
+                    blnStorage = blnTemp;
+            }
+        }
+
+        /// <summary>
+        /// Load an Int Option from the Registry (which will subsequently be converted to the XML Settings File format). Registry keys are deleted once they are read since they will no longer be used.
+        /// </summary>
+        private static void LoadStringFromRegistry(ref string strStorage, string strBoolName, string strSubKey = "")
+        {
+	        object objRegistryResult = !string.IsNullOrWhiteSpace(strSubKey) ? _objBaseChummerKey.OpenSubKey(strSubKey).GetValue(strBoolName) : _objBaseChummerKey.GetValue(strBoolName);
+	        if (objRegistryResult != null)
+            {
+                strStorage = objRegistryResult.ToString();
+            }
+        }
+
+        static GlobalOptions()
 		{
-			string settingsDirectoryPath = Path.Combine(Environment.CurrentDirectory, "settings");
-            if (!Directory.Exists(settingsDirectoryPath))
+			if (Utils.IsRunningInVisualStudio()) return;
+
+            _objBaseChummerKey = Registry.CurrentUser.CreateSubKey("Software\\Chummer5");
+		    if (_objBaseChummerKey == null)
+		        return;
+
+            string settingsDirectoryPath = Path.Combine(Application.StartupPath, "settings");
+			if (!Directory.Exists(settingsDirectoryPath))
 				Directory.CreateDirectory(settingsDirectoryPath);
 
-			// Automatic Update.
-			try
-			{
-				_blnAutomaticUpdate = Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("autoupdate").ToString());
-			}
-			catch
-			{
-			}
+            // Automatic Update.
+            LoadBoolFromRegistry(ref _blnAutomaticUpdate, "autoupdate");
 
-			try
-			{
-				_lifeModuleEnabled =
-					Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("lifemodule").ToString());
-			}
-			catch 
-			{
-			}
+            LoadBoolFromRegistry(ref _blnLiveCustomData, "livecustomdata");
+
+            LoadBoolFromRegistry(ref _lifeModuleEnabled, "lifemodule");
+
+            LoadBoolFromRegistry(ref _omaeEnabled, "omaeenabled");
 
             // Whether or not the app should only download localised files in the user's selected language.
-			try
-			{
-				_blnLocalisedUpdatesOnly = Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("localisedupdatesonly").ToString());
-			}
-			catch
-			{
-			}
+            LoadBoolFromRegistry(ref _blnLocalisedUpdatesOnly, "localisedupdatesonly");
 
             // Whether or not the app should use logging.
-            try
-            {
-                _blnUseLogging = Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("uselogging").ToString());
-            }
-            catch
-            {
-            }
+            LoadBoolFromRegistry(ref _blnUseLogging, "uselogging");
 
             // Whether or not dates should include the time.
-			try
-			{
-				_blnDatesIncludeTime = Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("datesincludetime").ToString());
-			}
-			catch
-			{
-			}
+            LoadBoolFromRegistry(ref _blnDatesIncludeTime, "datesincludetime");
 
-			try
-			{
-				_blnMissionsOnly = Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("missionsonly").ToString());
-			}
-			catch { }
+            LoadBoolFromRegistry(ref _blnMissionsOnly, "missionsonly");
 
-			try
-			{
-				_blnDronemods = Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("dronemods").ToString());
-			}
-			catch { }
+            LoadBoolFromRegistry(ref _blnDronemods, "dronemods");
 
+            LoadBoolFromRegistry(ref _blnDronemodsMaximumPilot, "dronemodsPilot");
 
-			// Whether or not printouts should be sent to a file before loading them in the browser. This is a fix for getting printing to work properly on Linux using Wine.
-			try
-			{
-				_blnPrintToFileFirst = Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("printtofilefirst").ToString());
-			}
-			catch
-			{
-			}
+            // Whether or not printouts should be sent to a file before loading them in the browser. This is a fix for getting printing to work properly on Linux using Wine.
+            LoadBoolFromRegistry(ref _blnPrintToFileFirst, "printtofilefirst");
 
-			// Default character sheet.
-			try
-			{
-				_strDefaultCharacterSheet = Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("defaultsheet").ToString();
-			}
-			catch
-			{
-			}
+            // Default character sheet.
+            LoadStringFromRegistry(ref _strDefaultCharacterSheet, "defaultsheet");
 
-			// Omae Settings.
-			// Username.
-			try
+            // Omae Settings.
+            // Username.
+            LoadStringFromRegistry(ref _strOmaeUserName, "omaeusername");
+            // Password.
+            LoadStringFromRegistry(ref _strOmaePassword, "omaepassword");
+            // AutoLogin.
+            LoadBoolFromRegistry(ref _blnOmaeAutoLogin, "omaeautologin");
+            // Language.
+            LoadStringFromRegistry(ref _strLanguage, "language");
+			if (_strLanguage == "en-us2")
 			{
-				_strOmaeUserName = Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("omaeusername").ToString();
+				_strLanguage = "en-us";
 			}
-			catch
-			{
-			}
-			// Password.
-			try
-			{
-				_strOmaePassword = Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("omaepassword").ToString();
-			}
-			catch
-			{
-			}
-			// AutoLogin.
-			try
-			{
-				_blnOmaeAutoLogin = Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("omaeautologin").ToString());
-			}
-			catch
-			{
-			}
-			// Language.
-			try
-			{
-				_strLanguage = Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("language").ToString();
-				if (_strLanguage == "en-us2")
-				{
-					_strLanguage = "en-us";
-				}
-			}
-			catch
-			{
-			}
-			// Startup in Fullscreen mode.
-			try
-			{
-				_blnStartupFullscreen = Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("startupfullscreen").ToString());
-			}
-			catch
-			{
-			}
-			// Single instace of the Dice Roller window.
-			try
-			{
-				_blnSingleDiceRoller = Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("singlediceroller").ToString());
-			}
-			catch
-			{
-			}
+            // Startup in Fullscreen mode.
+            LoadBoolFromRegistry(ref _blnStartupFullscreen, "startupfullscreen");
+            // Single instace of the Dice Roller window.
+            LoadBoolFromRegistry(ref _blnSingleDiceRoller, "singlediceroller");
 
             // Open PDFs as URLs. For use with Chrome, Firefox, etc.
-            try
-            {
-                _blnOpenPDFsAsURLs = Convert.ToBoolean(Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("openpdfsasurls").ToString());
-            }
-            catch
-            {
-            }
+            LoadStringFromRegistry(ref _strPDFParameters, "pdfparameters");
 
-			// PDF application path.
-			try
-			{
-				_strPDFAppPath = Registry.CurrentUser.CreateSubKey("Software\\Chummer5").GetValue("pdfapppath").ToString();
-			}
-			catch
-			{
-			}
+            // PDF application path.
+            LoadStringFromRegistry(ref _strPDFAppPath, "pdfapppath");
+
+            // Folder path to check for characters.
+            LoadStringFromRegistry(ref _strCharacterRosterPath, "characterrosterpath");
+
+            // Prefer Nightly Updates.
+            LoadBoolFromRegistry(ref _blnPreferNightlyUpdates, "prefernightlybuilds");
 
 			// Retrieve the SourcebookInfo objects.
 			XmlDocument objXmlDocument = XmlManager.Instance.Load("books.xml");
-			XmlNodeList objXmlBookList = objXmlDocument.SelectNodes("/chummer/books/book");
-			foreach (XmlNode objXmlBook in objXmlBookList)
+			foreach (XmlNode objXmlBook in objXmlDocument.SelectNodes("/chummer/books/book"))
 			{
-				try
+				if (objXmlBook["code"] != null)
 				{
-					SourcebookInfo objSource = new SourcebookInfo();
-					string strTemp = Registry.CurrentUser.CreateSubKey("Software\\Chummer5\\Sourcebook").GetValue(objXmlBook["code"].InnerText).ToString();
-					string[] strParts = strTemp.Split('|');
-					objSource.Code = objXmlBook["code"].InnerText;
-					objSource.Path = strParts[0];
-					objSource.Offset = Convert.ToInt32(strParts[1]);
+                    SourcebookInfo objSource = new SourcebookInfo();
+                    objSource.Code = objXmlBook["code"].InnerText;
+                    string strTemp = string.Empty;
 
-					_lstSourcebookInfo.Add(objSource);
-				}
-				catch
-				{
-				}
+                    try
+                    {
+                        LoadStringFromRegistry(ref strTemp, objXmlBook["code"].InnerText, "Sourcebook");
+                        if (!string.IsNullOrEmpty(strTemp))
+                        {
+
+                            string[] strParts = strTemp.Split('|');
+                            objSource.Path = strParts[0];
+                            if (strParts.Length > 1)
+                            {
+                                int intTmp;
+                                if (int.TryParse(strParts[1], out intTmp))
+                                    objSource.Offset = intTmp;
+                            }
+                        }
+                        _lstSourcebookInfo.Add(objSource);
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
 			}
 
 			CyberwareGrades.LoadList(Improvement.ImprovementSource.Cyberware);
 			BiowareGrades.LoadList(Improvement.ImprovementSource.Bioware);
 		}
 
-		
 
 		/// <summary>
 		/// Global instance of the GlobalOptions.
@@ -340,7 +300,22 @@ namespace Chummer
 			}
 		}
 
-		public bool LifeModuleEnabled
+        /// <summary>
+		/// Whether or not live updates from the customdata directory are allowed.
+		/// </summary>
+		public bool LiveCustomData
+        {
+            get
+            {
+                return _blnLiveCustomData;
+            }
+            set
+            {
+                _blnLiveCustomData = value;
+            }
+        }
+
+        public bool LifeModuleEnabled
 		{
 			get { return _lifeModuleEnabled; }
 			set { _lifeModuleEnabled = value; }
@@ -416,6 +391,15 @@ namespace Chummer
 				_blnDronemods = value;
 			}
 		}
+
+	    public bool DronemodsMaximumPilot
+	    {
+	        get
+	        {
+	            return _blnDronemodsMaximumPilot;
+	        }
+	        set { _blnDronemodsMaximumPilot = value; }
+	    }
 
 
 		/// <summary>
@@ -539,9 +523,9 @@ namespace Chummer
 		}
 
 		/// <summary>
-		/// CultureInfor for number localization.
+		/// CultureInfo for number localization.
 		/// </summary>
-		public CultureInfo CultureInfo
+		public static CultureInfo CultureInfo
 		{
 			get
 			{
@@ -549,10 +533,21 @@ namespace Chummer
 			}
 		}
 
-		/// <summary>
-		/// Clipboard.
+        /// <summary>
+		/// Invariant CultureInfo for saving and loading of numbers.
 		/// </summary>
-		public XmlDocument Clipboard
+		public static CultureInfo InvariantCultureInfo
+        {
+            get
+            {
+                return _objInvariantCultureInfo;
+            }
+        }
+
+        /// <summary>
+        /// Clipboard.
+        /// </summary>
+        public XmlDocument Clipboard
 		{
 			get
 			{
@@ -609,20 +604,11 @@ namespace Chummer
 			}
 		}
 
-        /// <summary>
-        /// Path to the user's PDF application.
-        /// </summary>
-        public string URLAppPath
-        {
-            get
-            {
-                return _strURLAppPath;
-            }
-            set
-            {
-                _strURLAppPath = value;
-            }
-        }
+		public string PDFParameters
+		{
+			get { return _strPDFParameters;}
+			set { _strPDFParameters = value; }
+		}
 		/// <summary>
 		/// List of SourcebookInfo.
 		/// </summary>
@@ -637,6 +623,38 @@ namespace Chummer
 				_lstSourcebookInfo = value;
 			}
 		}
+
+		public bool OmaeEnabled
+		{
+			get { return _omaeEnabled; }
+			set { _omaeEnabled = value; }
+		}
+
+		public bool PreferNightlyBuilds
+		{
+			get
+			{
+				return _blnPreferNightlyUpdates;
+			}
+			set
+			{
+				_blnPreferNightlyUpdates = value;
+			}
+		}
+
+		public string CharacterRosterPath
+		{
+			get
+			{
+				return _strCharacterRosterPath;
+			}
+			set
+			{
+				_strCharacterRosterPath = value;
+			}
+		}
+
+		public string PDFArguments { get; internal set; }
 		#endregion
 
 		#region MRU Methods
@@ -644,193 +662,88 @@ namespace Chummer
 		/// Add a file to the most recently used characters.
 		/// </summary>
 		/// <param name="strFile">Name of the file to add.</param>
-		public void AddToMRUList(string strFile)
+		public void AddToMRUList(string strFile, string strMRUType = "mru")
 		{
-			List<string> strFiles = ReadMRUList();
+			List<string> strFiles = ReadMRUList(strMRUType);
 
-			// Make sure the file does not already exist in the MRU list.
-			if (strFiles.Contains(strFile))
+            // Make sure the file doesn't exist in the sticky MRU list if we're adding to base MRU list.
+            if (strMRUType == "mru")
+            {
+                List<string> strStickyFiles = ReadMRUList("stickymru");
+                if (strStickyFiles.Contains(strFile))
+                    return;
+            }
+            // Make sure the file does not already exist in the MRU list.
+            if (strFiles.Contains(strFile))
 				strFiles.Remove(strFile);
 
-			// Make sure the file doesn't exist in the sticky MRU list.
-			List<string> strStickyFiles = ReadStickyMRUList();
-			if (strStickyFiles.Contains(strFile))
-				return;
-
-			strFiles.Insert(0, strFile);
+		    strFiles.Insert(0, strFile);
 
 			if (strFiles.Count > 10)
 				strFiles.RemoveRange(10, strFiles.Count - 10);
 
-			RegistryKey objRegistry = Registry.CurrentUser.CreateSubKey("Software\\Chummer5");
 			int i = 0;
 			foreach (string strItem in strFiles)
 			{
 				i++;
-				objRegistry.SetValue("mru" + i.ToString(), strItem);
+                _objBaseChummerKey.SetValue(strMRUType + i.ToString(), strItem);
 			}
-			MRUChanged();
+			MRUChanged?.Invoke();
 		}
 
 		/// <summary>
 		/// Remove a file from the most recently used characters.
 		/// </summary>
 		/// <param name="strFile">Name of the file to remove.</param>
-		public void RemoveFromMRUList(string strFile)
+		public void RemoveFromMRUList(string strFile, string strMRUType = "mru")
 		{
-			List<string> strFiles = ReadMRUList();
+			List<string> strFiles = ReadMRUList(strMRUType);
 
-			foreach (string strItem in strFiles)
+            bool blnHasRemoved = false;
+            for (int i = 0; i < strFiles.Count; i++)
+            {
+                if (blnHasRemoved)
+                {
+                    _objBaseChummerKey.SetValue(strMRUType + (i + 1).ToString(), strFiles[i]);
+                }
+                else if (strFiles[i] == strFile)
+                {
+                    strFiles.RemoveAt(i);
+                    blnHasRemoved = true;
+                }
+            }
+            if (strFiles.Count < 10)
 			{
-				if (strItem == strFile)
+				for (int i = strFiles.Count + 1; i <= 10; i++)
 				{
-					strFiles.Remove(strItem);
-					break;
-				}
-			}
-
-			RegistryKey objRegistry = Registry.CurrentUser.CreateSubKey("Software\\Chummer5");
-			int i = 0;
-			foreach (string strItem in strFiles)
-			{
-				i++;
-				objRegistry.SetValue("mru" + i.ToString(), strItem);
-			}
-			if (strFiles.Count < 10)
-			{
-				for (i = strFiles.Count + 1; i <= 10; i++)
-				{
-					try
+					if (_objBaseChummerKey.GetValue(strMRUType + i.ToString()) != null)
 					{
-						objRegistry.DeleteValue("mru" + i.ToString());
-					}
-					catch
-					{
+                        _objBaseChummerKey.DeleteValue(strMRUType + i.ToString());
 					}
 				}
 			}
-			MRUChanged();
+			MRUChanged?.Invoke();
 		}
 
 		/// <summary>
 		/// Retrieve the list of most recently used characters.
 		/// </summary>
-		public List<string> ReadMRUList()
+		public List<string> ReadMRUList(string strMRUType = "mru")
 		{
-			RegistryKey objRegistry = Registry.CurrentUser.CreateSubKey("Software\\Chummer5");
 			List<string> lstFiles = new List<string>();
 
 			for (int i = 1; i <= 10; i++)
 			{
-				if ((objRegistry.GetValue("mru" + i.ToString())) != null)
+			    object objLoopValue = _objBaseChummerKey.GetValue(strMRUType + i.ToString());
+				if (objLoopValue != null)
 				{
-					lstFiles.Add(objRegistry.GetValue("mru" + i.ToString()).ToString());
-				}
-			}
-
-			return lstFiles;
-		}
-
-		/// <summary>
-		/// Add a file to the sticky most recently used characters.
-		/// </summary>
-		/// <param name="strFile">Name of the file to add.</param>
-		public void AddToStickyMRUList(string strFile)
-		{
-			List<string> strFiles = ReadStickyMRUList();
-
-			// Make sure the file does not already exist in the MRU list.
-			if (strFiles.Contains(strFile))
-				strFiles.Remove(strFile);
-
-			strFiles.Insert(0, strFile);
-
-			if (strFiles.Count > 10)
-				strFiles.RemoveRange(10, strFiles.Count - 10);
-
-			RegistryKey objRegistry = Registry.CurrentUser.CreateSubKey("Software\\Chummer5");
-			int i = 0;
-			foreach (string strItem in strFiles)
-			{
-				i++;
-				objRegistry.SetValue("stickymru" + i.ToString(), strItem);
-			}
-			MRUChanged();
-		}
-
-		/// <summary>
-		/// Remove a file from the sticky most recently used characters.
-		/// </summary>
-		/// <param name="strFile">Name of the file to remove.</param>
-		public void RemoveFromStickyMRUList(string strFile)
-		{
-			List<string> strFiles = ReadStickyMRUList();
-
-			foreach (string strItem in strFiles)
-			{
-				if (strItem == strFile)
-				{
-					strFiles.Remove(strItem);
-					break;
-				}
-			}
-
-			RegistryKey objRegistry = Registry.CurrentUser.CreateSubKey("Software\\Chummer5");
-			int i = 0;
-			foreach (string strItem in strFiles)
-			{
-				i++;
-				objRegistry.SetValue("stickymru" + i.ToString(), strItem);
-			}
-			if (strFiles.Count < 10)
-			{
-				for (i = strFiles.Count + 1; i <= 10; i++)
-				{
-					try
-					{
-						objRegistry.DeleteValue("stickymru" + i.ToString());
-					}
-					catch
-					{
-					}
-				}
-			}
-			MRUChanged();
-		}
-
-		/// <summary>
-		/// Retrieve the list of sticky most recently used characters.
-		/// </summary>
-		public List<string> ReadStickyMRUList()
-		{
-			RegistryKey objRegistry = Registry.CurrentUser.CreateSubKey("Software\\Chummer5");
-			List<string> lstFiles = new List<string>();
-
-			for (int i = 1; i <= 10; i++)
-			{
-				if ((objRegistry.GetValue("stickymru" + i.ToString())) != null)
-				{
-					lstFiles.Add(objRegistry.GetValue("stickymru" + i.ToString()).ToString());
+					lstFiles.Add(objLoopValue.ToString());
 				}
 			}
 
 			return lstFiles;
 		}
 		#endregion
-        /// <summary>
-        /// Which method of opening PDFs to use. True = file://path.pdf#page=x
-        /// </summary>
-        public bool OpenPDFsAsURLs 
-        { 
-            get
-            {
-                return GlobalOptions._blnOpenPDFsAsURLs;
-            }
-            set
-            {
-                GlobalOptions._blnOpenPDFsAsURLs = value;
-            } 
-        }
 
-    }
+	}
 }

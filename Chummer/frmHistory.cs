@@ -36,16 +36,17 @@ namespace Chummer
 			// Display the contents of the changelog.txt file in the TextBox.
 			try
 			{
-				txtRevisionHistory.Text = File.ReadAllText(Path.Combine(Environment.CurrentDirectory, "changelog.txt"));
-				txtRevisionHistory.SelectionStart = 0;
-				txtRevisionHistory.SelectionLength = 0;
+				txtRevisionHistory.Text = File.ReadAllText(Path.Combine(Application.StartupPath, "changelog.txt"));
 			}
 			catch
 			{
 				MessageBox.Show(LanguageManager.Instance.GetString("Message_History_FileNotFound"), LanguageManager.Instance.GetString("MessageTitle_FileNotFound"), MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-				this.Close();
+				Close();
+                return;
 			}
-		}
+            txtRevisionHistory.SelectionStart = 0;
+            txtRevisionHistory.SelectionLength = 0;
+        }
 		#endregion
 	}
 }

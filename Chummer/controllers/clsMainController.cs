@@ -1,4 +1,4 @@
-/*  This file is part of Chummer5a.
+﻿/*  This file is part of Chummer5a.
  *
  *  Chummer5a is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,20 +16,20 @@
  *  You can obtain the full source code for Chummer5a at
  *  https://github.com/chummer5a/chummer5a
  */
-﻿using System;
+ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Windows.Forms;
+ using System.Windows.Documents;
+ using System.Windows.Forms;
 using System.Xml;
+ using Chummer.Backend.Equipment;
 
 namespace Chummer
 {
-	public class MainController
-	{
-		private Character _objCharacter;
-		private CommonFunctions _objFunctions;
-		private ImprovementManager _objImprovementManager;
+	public class MainController : CharacterShared
+    {
+		private readonly ImprovementManager _objImprovementManager;
 
 		public MainController(Character objCharacter)
 		{
@@ -65,8 +65,7 @@ namespace Chummer
 			}
 
 			// Locate the currently selected piece of Gear.
-			Gear objGear = new Gear(_objCharacter);
-			objGear = _objFunctions.FindGear(treGear.SelectedNode.Tag.ToString(), _objCharacter.Gear);
+			Gear objGear = CommonFunctions.DeepFindById(treGear.SelectedNode.Tag.ToString(), _objCharacter.Gear);
 
 			// Gear cannot be moved to one if its children.
 			bool blnAllowMove = true;
@@ -102,13 +101,12 @@ namespace Chummer
 			}
 			else
 			{
-				Gear objParent = new Gear(_objCharacter);
-				// Locate the Gear that the item was dropped on.
-				objParent = _objFunctions.FindGear(objDestination.Tag.ToString(), _objCharacter.Gear);
+                // Locate the Gear that the item was dropped on.
+                Gear objParent = CommonFunctions.DeepFindById(objDestination.Tag.ToString(), _objCharacter.Gear);
 
 				// Add the Gear as a child of the destination Node and clear its location.
 				objParent.Children.Add(objGear);
-				objGear.Location = "";
+				objGear.Location = string.Empty;
 				objGear.Parent = objParent;
 			}
 
@@ -156,7 +154,7 @@ namespace Chummer
 
 			// Change the Location on the Gear item.
 			if (objNewParent.Text == LanguageManager.Instance.GetString("Node_SelectedGear"))
-				objGear.Location = "";
+				objGear.Location = string.Empty;
 			else
 				objGear.Location = objNewParent.Text;
 
@@ -185,7 +183,7 @@ namespace Chummer
 			if (intNewIndex == 0)
 				return;
 
-			string strLocation = "";
+			string strLocation = string.Empty;
 			// Locate the currently selected Location.
 			foreach (string strCharacterLocation in _objCharacter.Locations)
 			{
@@ -253,7 +251,7 @@ namespace Chummer
 		public void MoveArmorNode(int intNewIndex, TreeNode objDestination, TreeView treArmor)
 		{
 			// Locate the currently selected Armor.
-			Armor objArmor = _objFunctions.FindArmor(treArmor.SelectedNode.Tag.ToString(), _objCharacter.Armor);
+			Armor objArmor = CommonFunctions.FindByIdWithNameCheck(treArmor.SelectedNode.Tag.ToString(), _objCharacter.Armor);
 
 			_objCharacter.Armor.Remove(objArmor);
 			if (intNewIndex > _objCharacter.Armor.Count)
@@ -271,7 +269,7 @@ namespace Chummer
 
 			// Change the Location on the Armor item.
 			if (objNewParent.Text == LanguageManager.Instance.GetString("Node_SelectedArmor"))
-				objArmor.Location = "";
+				objArmor.Location = string.Empty;
 			else
 				objArmor.Location = objNewParent.Text;
 
@@ -300,7 +298,7 @@ namespace Chummer
 			if (intNewIndex == 0)
 				return;
 
-			string strLocation = "";
+			string strLocation = string.Empty;
 			// Locate the currently selected Location.
 			foreach (string strCharacterLocation in _objCharacter.ArmorBundles)
 			{
@@ -355,7 +353,7 @@ namespace Chummer
 
 			// Change the Location of the Weapon.
 			if (objNewParent.Text == LanguageManager.Instance.GetString("Node_SelectedWeapons"))
-				objWeapon.Location = "";
+				objWeapon.Location = string.Empty;
 			else
 				objWeapon.Location = objNewParent.Text;
 
@@ -384,7 +382,7 @@ namespace Chummer
 			if (intNewIndex == 0)
 				return;
 
-			string strLocation = "";
+			string strLocation = string.Empty;
 			// Locate the currently selected Location.
 			foreach (string strCharacterLocation in _objCharacter.WeaponLocations)
 			{
@@ -482,13 +480,13 @@ namespace Chummer
 			// Make sure the destination is another piece of Gear or a Location.
 			bool blnDestinationGear = true;
 			bool blnDestinationLocation = false;
-			Vehicle objTempVehicle = new Vehicle(_objCharacter);
-			Gear objDestinationGear = _objFunctions.FindVehicleGear(objDestination.Tag.ToString(), _objCharacter.Vehicles, out objTempVehicle);
+			Vehicle objTempVehicle;
+			Gear objDestinationGear = CommonFunctions.FindVehicleGear(objDestination.Tag.ToString(), _objCharacter.Vehicles, out objTempVehicle);
 			if (objDestinationGear == null)
 				blnDestinationGear = false;
 
 			// Determine if this is a Location in the destination Vehicle.
-			string strDestinationLocation = "";
+			string strDestinationLocation = string.Empty;
 			foreach (string strLocation in objDestinationVehicle.Locations)
 			{
 				if (strLocation == objDestination.Tag.ToString())
@@ -503,8 +501,8 @@ namespace Chummer
 				return;
 
 			// Locate the currently selected piece of Gear.
-			Vehicle objVehicle = new Vehicle(_objCharacter);
-			Gear objGear = _objFunctions.FindVehicleGear(treVehicles.SelectedNode.Tag.ToString(), _objCharacter.Vehicles, out objVehicle);
+			Vehicle objVehicle;
+			Gear objGear = CommonFunctions.FindVehicleGear(treVehicles.SelectedNode.Tag.ToString(), _objCharacter.Vehicles, out objVehicle);
 
 			// Gear cannot be moved to one of its children.
 			bool blnAllowMove = true;
@@ -542,7 +540,7 @@ namespace Chummer
 			{
 				// Add the Gear to its new parent.
 				objDestinationGear.Children.Add(objGear);
-				objGear.Location = "";
+				objGear.Location = string.Empty;
 				objGear.Parent = objDestinationGear;
 			}
 
@@ -624,7 +622,7 @@ namespace Chummer
 			if (intNewIndex == 0)
 				return;
 
-			string strLocation = "";
+			string strLocation = string.Empty;
 			// Locate the currently selected Group.
 			foreach (string strCharacterGroup in _objCharacter.ImprovementGroups)
 			{
@@ -695,10 +693,158 @@ namespace Chummer
             _objCharacter.ComplexForms.Clear();
 		}
 
-		/// <summary>
-		/// Clear all Critter tab elements from the character.
+        /// <summary>
+		/// Clear all Advanced Programs tab elements from the character.
 		/// </summary>
-		public void ClearCritterTab(TreeView treCritterPowers)
+		public void ClearAdvancedProgramsTab(TreeView treAIPrograms)
+        {
+            // Run through all of the Advanced Programs and remove their Improvements.
+            foreach (AIProgram objProgram in _objCharacter.AIPrograms)
+                _objImprovementManager.RemoveImprovements(Improvement.ImprovementSource.AIProgram, objProgram.InternalId);
+
+            // Clear the list of Advanced Programs.
+            foreach (TreeNode objNode in treAIPrograms.Nodes)
+                objNode.Nodes.Clear();
+
+            _objCharacter.AIPrograms.Clear();
+        }
+
+        /// <summary>
+		/// Clear all Cyberware tab elements from the character.
+		/// </summary>
+		public void ClearCyberwareTab(TreeView treCyberware, TreeView treWeapons, TreeView treVehicles, TreeView treQualities)
+        {
+            XmlDocument objXmlDocument;
+            // Run through all of the Advanced Programs and remove their Improvements.
+            foreach (Cyberware objCyberware in _objCharacter.Cyberware)
+            {
+                if (objCyberware.SourceType == Improvement.ImprovementSource.Bioware)
+                {
+                    objXmlDocument = XmlManager.Instance.Load("bioware.xml");
+                }
+                else
+                {
+                    objXmlDocument = XmlManager.Instance.Load("cyberware.xml");
+                }
+                // Run through the Cyberware's child elements and remove any Improvements and Cyberweapons.
+                foreach (Cyberware objChildCyberware in objCyberware.Children)
+                {
+                    _objImprovementManager.RemoveImprovements(objCyberware.SourceType, objChildCyberware.InternalId);
+                    if (objChildCyberware.WeaponID != Guid.Empty.ToString())
+                    {
+                        // Remove the Weapon from the TreeView.
+                        TreeNode objRemoveNode = new TreeNode();
+                        foreach (TreeNode objWeaponNode in treWeapons.Nodes[0].Nodes)
+                        {
+                            if (objWeaponNode.Tag.ToString() == objChildCyberware.WeaponID)
+                                objRemoveNode = objWeaponNode;
+                        }
+                        treWeapons.Nodes.Remove(objRemoveNode);
+
+                        // Remove the Weapon from the Character.
+                        Weapon objRemoveWeapon = new Weapon(_objCharacter);
+                        foreach (Weapon objWeapon in _objCharacter.Weapons)
+                        {
+                            if (objWeapon.InternalId == objChildCyberware.WeaponID)
+                                objRemoveWeapon = objWeapon;
+                        }
+                        _objCharacter.Weapons.Remove(objRemoveWeapon);
+
+                        // Remove the Vehicle from the Character.
+                        Vehicle objRemoveCyberVehicle = new Vehicle(_objCharacter);
+                        foreach (Vehicle objVehicle in _objCharacter.Vehicles)
+                        {
+                            if (objVehicle.InternalId == objChildCyberware.VehicleID)
+                                objRemoveCyberVehicle = objVehicle;
+                        }
+                        _objCharacter.Vehicles.Remove(objRemoveCyberVehicle);
+                    }
+                }
+                // Remove the Children.
+                objCyberware.Children.Clear();
+
+                // Remove the Cyberweapon created by the Cyberware if applicable.
+                if (objCyberware.WeaponID != Guid.Empty.ToString())
+                {
+                    // Remove the Weapon from the TreeView.
+                    TreeNode objRemoveNode = new TreeNode();
+                    foreach (TreeNode objWeaponNode in treWeapons.Nodes[0].Nodes)
+                    {
+                        if (objWeaponNode.Tag.ToString() == objCyberware.WeaponID)
+                            objRemoveNode = objWeaponNode;
+                    }
+                    treWeapons.Nodes.Remove(objRemoveNode);
+
+                    // Remove the Weapon from the Character.
+                    Weapon objRemoveWeapon = new Weapon(_objCharacter);
+                    foreach (Weapon objWeapon in _objCharacter.Weapons)
+                    {
+                        if (objWeapon.InternalId == objCyberware.WeaponID)
+                            objRemoveWeapon = objWeapon;
+                    }
+                    _objCharacter.Weapons.Remove(objRemoveWeapon);
+                }
+
+                // Remove the Cybervehicle created by the Cyberware if applicable.
+                if (objCyberware.VehicleID != Guid.Empty.ToString())
+                {
+                    // Remove the Vehicle from the TreeView.
+                    TreeNode objRemoveVehicleNode = new TreeNode();
+                    foreach (TreeNode objVehicleNode in treVehicles.Nodes[0].Nodes)
+                    {
+                        if (objVehicleNode.Tag.ToString() == objCyberware.VehicleID)
+                            objRemoveVehicleNode = objVehicleNode;
+                    }
+                    treVehicles.Nodes.Remove(objRemoveVehicleNode);
+
+                    // Remove the Vehicle from the Character.
+                    Vehicle objRemoveVehicle = new Vehicle(_objCharacter);
+                    foreach (Vehicle objVehicle in _objCharacter.Vehicles)
+                    {
+                        if (objVehicle.InternalId == objCyberware.VehicleID)
+                            objRemoveVehicle = objVehicle;
+                    }
+                    _objCharacter.Vehicles.Remove(objRemoveVehicle);
+                }
+
+                // Remove any Gear attached to the Cyberware.
+                foreach (Gear objGear in objCyberware.Gear)
+                { _objFunctions.DeleteGear(objGear, treWeapons, _objImprovementManager); }
+
+
+                // Open the Cyberware XML file and locate the selected piece.
+                XmlNode objXmlCyberware;
+                if (objCyberware.SourceType == Improvement.ImprovementSource.Bioware)
+                {
+                    objXmlCyberware = objXmlDocument.SelectSingleNode("/chummer/biowares/bioware[name = \"" + objCyberware.Name + "\"]");
+                }
+                else
+                {
+                    objXmlCyberware = objXmlDocument.SelectSingleNode("/chummer/cyberwares/cyberware[name = \"" + objCyberware.Name + "\"]");
+                }
+
+                // Fix for legacy characters with old addqualities improvements. 
+                if (objXmlCyberware["addqualities"] != null)
+                {
+                    RemoveAddedQualities(objXmlCyberware.SelectNodes("addqualities/addquality"), treQualities, _objImprovementManager);
+                }
+                
+                // Remove any Improvements created by the piece of Cyberware.
+                _objImprovementManager.RemoveImprovements(objCyberware.SourceType, objCyberware.InternalId);
+            }
+            _objCharacter.Cyberware.Clear();
+
+            // Clear the list of Advanced Programs.
+            // Remove the item from the TreeView.
+            foreach (TreeNode objNode in treCyberware.Nodes)
+                objNode.Nodes.Clear();
+            treCyberware.Nodes.Clear();
+        }
+
+        /// <summary>
+        /// Clear all Critter tab elements from the character.
+        /// </summary>
+        public void ClearCritterTab(TreeView treCritterPowers)
 		{
 			// Run through all of the Critter Powers and remove their Improvements.
 			foreach (CritterPower objPower in _objCharacter.CritterPowers)
@@ -741,43 +887,44 @@ namespace Chummer
 			int intFociTotal = 0;
 			bool blnWarned = false;
 
-			foreach (Gear objGear in _objCharacter.Gear)
+			foreach (Gear objGear in _objCharacter.Gear.Where(objGear => objGear.Category == "Foci" || objGear.Category == "Metamagic Foci"))
 			{
-				if (objGear.Category == "Foci" || objGear.Category == "Metamagic Foci")
+				List<Focus> removeFoci = new List<Focus>();
+				TreeNode objNode = new TreeNode();
+				objNode.Text = objGear.DisplayName.Replace(LanguageManager.Instance.GetString("String_Rating"), LanguageManager.Instance.GetString("String_Force"));
+				objNode.Tag = objGear.InternalId;
+				foreach (Focus objFocus in _objCharacter.Foci)
 				{
-					TreeNode objNode = new TreeNode();
-					objNode.Text = objGear.DisplayName.Replace(LanguageManager.Instance.GetString("String_Rating"), LanguageManager.Instance.GetString("String_Force"));
-					objNode.Tag = objGear.InternalId;
-					foreach (Focus objFocus in _objCharacter.Foci)
+					if (objFocus.GearId == objGear.InternalId)
 					{
-						if (objFocus.GearId == objGear.InternalId)
+						objNode.Checked = true;
+						objFocus.Rating = objGear.Rating;
+						intFociTotal += objFocus.Rating;
+						// Do not let the number of BP spend on bonded Foci exceed MAG * 5.
+						if (intFociTotal > _objCharacter.MAG.TotalValue * 5 && !_objCharacter.IgnoreRules)
 						{
-							objNode.Checked = true;
-							objFocus.Rating = objGear.Rating;
-							intFociTotal += objFocus.Rating;
-							// Do not let the number of BP spend on bonded Foci exceed MAG * 5.
-							if (intFociTotal > _objCharacter.MAG.TotalValue * 5 && !_objCharacter.IgnoreRules)
+							// Mark the Gear a Bonded.
+							foreach (Gear objCharacterGear in _objCharacter.Gear)
 							{
-								// Mark the Gear a Bonded.
-								foreach (Gear objCharacterGear in _objCharacter.Gear)
-								{
-									if (objCharacterGear.InternalId == objFocus.GearId)
-										objCharacterGear.Bonded = false;
-								}
-
-								_objCharacter.Foci.Remove(objFocus);
-								if (!blnWarned)
-								{
-									objNode.Checked = false;
-									MessageBox.Show(LanguageManager.Instance.GetString("Message_FocusMaximumForce"), LanguageManager.Instance.GetString("MessageTitle_FocusMaximum"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-									blnWarned = true;
-									break;
-								}
+								if (objCharacterGear.InternalId == objFocus.GearId)
+									objCharacterGear.Bonded = false;
+							}
+							removeFoci.Add(objFocus);
+							if (!blnWarned)
+							{
+								objNode.Checked = false;
+								MessageBox.Show(LanguageManager.Instance.GetString("Message_FocusMaximumForce"), LanguageManager.Instance.GetString("MessageTitle_FocusMaximum"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+								blnWarned = true;
+								break;
 							}
 						}
 					}
-					treFoci.Nodes.Add(objNode);
 				}
+				foreach (Focus f in removeFoci)
+				{
+					_objCharacter.Foci.Remove(f);
+				}
+				treFoci.Nodes.Add(objNode);
 			}
 
 			// Add Stacked Foci.
@@ -799,7 +946,7 @@ namespace Chummer
 							{
 								foreach (Gear objFociGear in objStack.Gear)
 								{
-									if (objFociGear.Extra != string.Empty)
+									if (!string.IsNullOrEmpty(objFociGear.Extra))
 										_objImprovementManager.ForcedValue = objFociGear.Extra;
 									_objImprovementManager.CreateImprovements(Improvement.ImprovementSource.StackedFocus, objStack.InternalId, objFociGear.Bonus, false, objFociGear.Rating, objFociGear.DisplayNameShort);
 								}
@@ -818,7 +965,7 @@ namespace Chummer
 		/// </summary>
 		public string CalculateFreeSpiritPowerPoints()
 		{
-			string strReturn = "";
+			string strReturn;
 
 			if (_objCharacter.Metatype == "Free Spirit" && !_objCharacter.IsCritter)
 			{
@@ -837,16 +984,16 @@ namespace Chummer
 				if (_objCharacter.Options.FreeSpiritPowerPointsMAG)
 					intPowerPoints = _objCharacter.MAG.TotalValue + _objImprovementManager.ValueOf(Improvement.ImprovementType.FreeSpiritPowerPoints);
 
-				strReturn = String.Format("{1} ({0} " + LanguageManager.Instance.GetString("String_Remaining") + ")", intPowerPoints - dblPowerPoints, intPowerPoints);
+				strReturn = string.Format("{1} ({0} " + LanguageManager.Instance.GetString("String_Remaining") + ")", intPowerPoints - dblPowerPoints, intPowerPoints);
 			}
 			else
 			{
-				int intPowerPoints = 0;
+				int intPowerPoints;
 
 				if (_objCharacter.Metatype == "Free Spirit")
 				{
 					// Critter Free Spirits have a number of Power Points equal to their EDG plus any Free Spirit Power Points Improvements.
-					intPowerPoints = _objCharacter.EDG.Value + _objImprovementManager.ValueOf(Improvement.ImprovementType.FreeSpiritPowerPoints); ;
+					intPowerPoints = _objCharacter.EDG.Value + _objImprovementManager.ValueOf(Improvement.ImprovementType.FreeSpiritPowerPoints);
 				}
 				else if (_objCharacter.Metatype == "Ally Spirit")
 				{
@@ -856,7 +1003,7 @@ namespace Chummer
 				else
 				{
 					// Spirits get 1 Power Point for every 3 full points of Force (MAG) they possess.
-					double dblMAG = Convert.ToDouble(_objCharacter.MAG.TotalValue, GlobalOptions.Instance.CultureInfo);
+					double dblMAG = Convert.ToDouble(_objCharacter.MAG.TotalValue, GlobalOptions.InvariantCultureInfo);
 					intPowerPoints = Convert.ToInt32(Math.Floor(dblMAG / 3.0));
 				}
 
@@ -867,7 +1014,7 @@ namespace Chummer
 						intUsed++;
 				}
 
-				strReturn = String.Format("{1} ({0} " + LanguageManager.Instance.GetString("String_Remaining") + ")", intPowerPoints - intUsed, intPowerPoints);
+				strReturn = string.Format("{1} ({0} " + LanguageManager.Instance.GetString("String_Remaining") + ")", intPowerPoints - intUsed, intPowerPoints);
 			}
 
 			return strReturn;
@@ -878,8 +1025,6 @@ namespace Chummer
 		/// </summary>
 		public string CalculateFreeSpritePowerPoints()
 		{
-			string strReturn = "";
-
 			// Free Sprite Power Points.
 			double dblPowerPoints = 0;
 
@@ -891,89 +1036,65 @@ namespace Chummer
 
 			int intPowerPoints = _objCharacter.EDG.TotalValue + _objImprovementManager.ValueOf(Improvement.ImprovementType.FreeSpiritPowerPoints);
 
-			strReturn = String.Format("{1} ({0} " + LanguageManager.Instance.GetString("String_Remaining") + ")", intPowerPoints - dblPowerPoints, intPowerPoints);
-
-			return strReturn;
+			return string.Format("{1} ({0} " + LanguageManager.Instance.GetString("String_Remaining") + ")", intPowerPoints - dblPowerPoints, intPowerPoints);
 		}
 
 		/// <summary>
 		/// Retrieve the information for the Mentor Spirit or Paragon the character might have.
 		/// </summary>
-		/// <param name="objMentorType">Type of feature to check for, either Mentor Spirit or Paragon.</param>
-		public MentorSpirit MentorInformation(MentorType objMentorType)
-		{
-			MentorSpirit objReturn = new MentorSpirit();
-			string strMentorSpirit = "";
+		/// <param name="mentorType">Type of feature to check for, either Mentor Spirit or Paragon.</param>
+		public MentorSpirit MentorInformation(Improvement.ImprovementType mentorType = Improvement.ImprovementType.MentorSpirit)
+	    {
+		    //TODO: STORE ALL THIS IN THE ACTUAL CLASS. SCROUNGING IT UP EVERY TIME IS STUPID. 
+		    MentorSpirit objReturn = new MentorSpirit();
+		    string strMentorSpirit = string.Empty;
 
-			Quality objMentorQuality = new Quality(_objCharacter);
+		    // Look for the Mentor Spirit or Paragon Quality based on the type chosen.
+		    Improvement imp = _objCharacter.Improvements.FirstOrDefault(i => i.ImproveType == mentorType);
+			if (imp == null) return null;
 
-			// Look for the Mentor Spirit or Paragon Quality based on the type chosen.
-			foreach (Quality objQuality in _objCharacter.Qualities)
-			{
-				if (objMentorType == MentorType.Mentor && objQuality.Name == "Mentor Spirit")
-				{
-					strMentorSpirit = objQuality.Extra;
-					objMentorQuality = objQuality;
-					break;
-				}
-				if (objMentorType == MentorType.Paragon && objQuality.Name == "Paragon")
-				{
-					strMentorSpirit = objQuality.Extra;
-					objMentorQuality = objQuality;
-					break;
-				}
-			}
+		    Quality source = _objCharacter.Qualities.FirstOrDefault(q => q.InternalId == imp.SourceName);
+		    string strAdvantage = string.Empty;
+		    string strDisadvantage = string.Empty;
 
-			if (strMentorSpirit != "")
-			{
-				string strAdvantage = "";
-				string strDisadvantage = "";
+		    // Load the appropriate XML document.
+		    XmlDocument doc =
+			    XmlManager.Instance.Load(mentorType == Improvement.ImprovementType.MentorSpirit ? "mentors.xml" : "paragons.xml");
 
-				XmlDocument objXmlDocument = new XmlDocument();
-				XmlNode objXmlMentor;
-				if (strMentorSpirit != "")
-				{
-					// Load the appropriate XML document.
-					if (objMentorType == MentorType.Mentor)
-						objXmlDocument = XmlManager.Instance.Load("mentors.xml");
-					else
-						objXmlDocument = XmlManager.Instance.Load("paragons.xml");
+		    XmlNode objXmlMentor = doc.SelectSingleNode("/chummer/mentors/mentor[id = \"" + imp.UniqueName + "\"]");
 
-					objXmlMentor = objXmlDocument.SelectSingleNode("/chummer/mentors/mentor[name = \"" + strMentorSpirit + "\"]");
+		    if (objXmlMentor == null) return null;
+		    // Build the list of advantages gained through the Mentor Spirit.
+		    if (!objXmlMentor.TryGetStringFieldQuickly("altadvantage", ref strAdvantage))
+		    {
+			    objXmlMentor.TryGetStringFieldQuickly("advantage", ref strAdvantage);
+		    }
+		    if (!objXmlMentor.TryGetStringFieldQuickly("altdisadvantage", ref strDisadvantage))
+		    {
+			    objXmlMentor.TryGetStringFieldQuickly("disadvantage", ref strDisadvantage);
+		    }
 
-					// Build the list of advantages gained through the Mentor Spirit.
-					if (objXmlMentor["altadvantage"] != null)
-						strAdvantage = objXmlMentor["altadvantage"].InnerText;
-					else
-						strAdvantage = objXmlMentor["advantage"].InnerText;
+		    if (source != null)
+		    {
+			    foreach (Improvement qualityImp in _objCharacter.Improvements.Where(i => i.SourceName == source.InternalId))
+			    {
+				    if (qualityImp.SourceName != source.InternalId) continue;
+				    if (!string.IsNullOrEmpty(qualityImp.Notes))
+					    strAdvantage += " " + LanguageManager.Instance.TranslateExtra(qualityImp.Notes) + ".";
+			    }
+		    }
 
-					foreach (Improvement objImprovement in _objCharacter.Improvements)
-					{
-						if (objImprovement.SourceName == objMentorQuality.InternalId)
-						{
-							if (objImprovement.Notes != string.Empty)
-								strAdvantage += " " + LanguageManager.Instance.TranslateExtra(objImprovement.Notes) + ".";
-						}
-					}
+		    // Populate the Mentor Spirit object.
+		    objReturn.Name = objXmlMentor["name"]?.Attributes["translate"]?.InnerText ?? objXmlMentor["name"]?.InnerText;
+		    objReturn.Advantages = LanguageManager.Instance.GetString("Label_SelectMentorSpirit_Advantage") + " " +
+		                           strAdvantage + "\n\n" +
+		                           LanguageManager.Instance.GetString("Label_SelectMetamagic_Disadvantage") + " " +
+		                           strDisadvantage;
 
-					// Build the list of disadvantages gained through the Mentor Spirit.
-					if (objXmlMentor["altdisadvantage"] != null)
-						strDisadvantage = objXmlMentor["altdisadvantage"].InnerText;
-					else
-						strDisadvantage = objXmlMentor["disadvantage"].InnerText;
+		    return objReturn;
+	    }
 
-					// Populate the Mentor Spirit object.
-					objReturn.Name = strMentorSpirit;
-					objReturn.Advantages = LanguageManager.Instance.GetString("Label_SelectMentorSpirit_Advantage") + " " + strAdvantage + "\n\n" + LanguageManager.Instance.GetString("Label_SelectMetamagic_Disadvantage") + " " + strDisadvantage;
-				}
-			}
-			else
-				return null;
-
-			return objReturn;
-		}
-
-		/// <summary>
+	    /// <summary>
 		/// Change the Equipped status of a piece of Gear and all of its children.
 		/// </summary>
 		/// <param name="objGear">Gear object to change.</param>
@@ -994,9 +1115,10 @@ namespace Chummer
 
 						if (blnAddImprovement)
 						{
-							if (objGear.Extra != string.Empty)
+							if (!string.IsNullOrEmpty(objGear.Extra))
 								_objImprovementManager.ForcedValue = objGear.Extra;
 							_objImprovementManager.CreateImprovements(Improvement.ImprovementSource.Gear, objGear.InternalId, objGear.Bonus, false, objGear.Rating, objGear.DisplayNameShort);
+							objGear.Extra = _objImprovementManager.SelectedValue;
 						}
 					}
 					else
@@ -1004,16 +1126,13 @@ namespace Chummer
 						// Stacked Foci need to be handled a little differently.
 						foreach (StackedFocus objStack in _objCharacter.StackedFoci)
 						{
-							if (objStack.GearId == objGear.InternalId)
+							if (objStack.GearId == objGear.InternalId && objStack.Bonded)
 							{
-								if (objStack.Bonded)
+								foreach (Gear objFociGear in objStack.Gear)
 								{
-									foreach (Gear objFociGear in objStack.Gear)
-									{
-										if (objFociGear.Extra != string.Empty)
-											_objImprovementManager.ForcedValue = objFociGear.Extra;
-										_objImprovementManager.CreateImprovements(Improvement.ImprovementSource.StackedFocus, objStack.InternalId, objFociGear.Bonus, false, objFociGear.Rating, objFociGear.DisplayNameShort);
-									}
+									if (!string.IsNullOrEmpty(objFociGear.Extra))
+										_objImprovementManager.ForcedValue = objFociGear.Extra;
+									_objImprovementManager.CreateImprovements(Improvement.ImprovementSource.StackedFocus, objStack.InternalId, objFociGear.Bonus, false, objFociGear.Rating, objFociGear.DisplayNameShort);
 								}
 							}
 						}

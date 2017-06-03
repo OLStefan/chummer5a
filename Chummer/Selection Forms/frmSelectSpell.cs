@@ -21,16 +21,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml;
+ using Chummer.Backend.Shared_Methods;
 
 namespace Chummer
 {
     public partial class frmSelectSpell : Form
     {
-        private string _strSelectedSpell = "";
+        private string _strSelectedSpell = string.Empty;
 
 		private bool _blnAddAgain = false;
-		private string _strLimitCategory = "";
-		private string _strForceSpell = "";
+	    private bool _blnIgnoreRequirements = false;
+		private string _strLimitCategory = string.Empty;
+		private string _strForceSpell = string.Empty;
 		private List<TreeNode> _lstExpandCategories;
 
 		private XmlDocument _objXmlDocument = new XmlDocument();
@@ -52,16 +54,16 @@ namespace Chummer
         private void frmSelectSpell_Load(object sender, EventArgs e)
         {
 			// If a value is forced, set the name of the spell and accept the form.
-			if (_strForceSpell != "")
+			if (!string.IsNullOrEmpty(_strForceSpell))
 			{
 				_strSelectedSpell = _strForceSpell;
-				this.DialogResult = DialogResult.OK;
+				DialogResult = DialogResult.OK;
 			}
 
-			foreach (Label objLabel in this.Controls.OfType<Label>())
+			foreach (Label objLabel in Controls.OfType<Label>())
 			{
 				if (objLabel.Text.StartsWith("["))
-					objLabel.Text = "";
+					objLabel.Text = string.Empty;
 			}
 
         	// Load the Spells information.
@@ -69,46 +71,49 @@ namespace Chummer
 
 			// Populate the Category list.
 			XmlNodeList objXmlNodeList = _objXmlDocument.SelectNodes("/chummer/categories/category");
+			HashSet<string> limit = new HashSet<string>();
+	        foreach (Improvement improvement in _objCharacter.Improvements.Where(improvement => improvement.ImproveType == Improvement.ImprovementType.LimitSpellCategory))
+	        {
+				limit.Add(improvement.ImprovedName);
+			}
 			foreach (XmlNode objXmlCategory in objXmlNodeList)
 			{
-				if (_strLimitCategory == "" || _strLimitCategory == objXmlCategory.InnerText)
-				{
-					TreeNode nodCategory = new TreeNode();
-					nodCategory.Tag = objXmlCategory.InnerText;
-					if (objXmlCategory.Attributes["translate"] != null)
-						nodCategory.Text = objXmlCategory.Attributes["translate"].InnerText;
-					else
-						nodCategory.Text = objXmlCategory.InnerText;
+				if ((limit.Count <= 0 || !limit.Contains(objXmlCategory.InnerText)) && limit.Count != 0) continue;
+				if (!string.IsNullOrEmpty(_strLimitCategory) && _strLimitCategory != objXmlCategory.InnerText) continue;
+				TreeNode nodCategory = new TreeNode();
+				nodCategory.Tag = objXmlCategory.InnerText;
+				nodCategory.Text = objXmlCategory.Attributes["translate"]?.InnerText ?? objXmlCategory.InnerText;
 
-					treSpells.Nodes.Add(nodCategory);
-				}
+				treSpells.Nodes.Add(nodCategory);
 			}
 
 			// Don't show the Extended Spell checkbox if the option to Extend any Detection Spell is diabled.
 			chkExtended.Visible = _objCharacter.Options.ExtendAnyDetectionSpell;
-			string strAdditionalFilter = "";
+			string strAdditionalFilter = string.Empty;
 			if (_objCharacter.Options.ExtendAnyDetectionSpell)
 				strAdditionalFilter = "not(contains(name, \", Extended\"))";
 
             // Populate the Spell list.
-			if (_strLimitCategory != "")
+			if (!string.IsNullOrEmpty(_strLimitCategory))
 				objXmlNodeList = _objXmlDocument.SelectNodes("/chummer/spells/spell[category = \"" + _strLimitCategory + "\" and " + strAdditionalFilter + " and (" + _objCharacter.Options.BookXPath() + ")]");
-			else
-			{
-				if (strAdditionalFilter == string.Empty)
-					objXmlNodeList = _objXmlDocument.SelectNodes("/chummer/spells/spell[" + _objCharacter.Options.BookXPath() + "]");
-				else
-					objXmlNodeList = _objXmlDocument.SelectNodes("/chummer/spells/spell[" + strAdditionalFilter + " and (" + _objCharacter.Options.BookXPath() + ")]");
-			}
+			else if (string.IsNullOrEmpty(strAdditionalFilter))
+                objXmlNodeList = _objXmlDocument.SelectNodes("/chummer/spells/spell[" + _objCharacter.Options.BookXPath() + "]");
+            else
+                objXmlNodeList = _objXmlDocument.SelectNodes("/chummer/spells/spell[" + strAdditionalFilter + " and (" + _objCharacter.Options.BookXPath() + ")]");
 
-			treSpells.TreeViewNodeSorter = new SortByName();
+            treSpells.TreeViewNodeSorter = new SortByName();
+            treSpells.SelectedNode = treSpells.Nodes[0];
             foreach (XmlNode objXmlSpell in objXmlNodeList)
             {
                 TreeNode nodSpell = new TreeNode();
                 TreeNode nodParent = new TreeNode();
                 bool blnInclude = false;
-
-                if (_objCharacter.AdeptEnabled && !_objCharacter.MagicianEnabled)
+				
+				if (_blnIgnoreRequirements)
+	            {
+		            blnInclude = true;
+	            }
+	            else if (_objCharacter.AdeptEnabled && !_objCharacter.MagicianEnabled)
                 {
                     if (objXmlSpell["category"].InnerText != "Rituals")
                         blnInclude = false;
@@ -119,39 +124,17 @@ namespace Chummer
                 }
                 else if (!_objCharacter.AdeptEnabled)
                 {
-                    if (objXmlSpell["descriptor"].InnerText.Contains("Adept"))
-                        blnInclude = false;
-                    else
-                        blnInclude = true;
+                    blnInclude = !objXmlSpell["descriptor"].InnerText.Contains("Adept");
                 }
                 else
                     blnInclude = true;
 
-                // Art requirements.
-                bool blnStreetGrimoire = (_objCharacter.Options.Books.Contains("SG"));
-                if (blnStreetGrimoire && !_objCharacter.Options.IgnoreArt)
-                {
-                    foreach (XmlNode objXmlArt in objXmlSpell.SelectNodes("required/allof/art"))
-                    {
-                        bool blnFound = false;
-                        foreach (Art objArt in _objCharacter.Arts)
-                        {
-                            if (objArt.Name == objXmlArt.InnerText)
-                            {
-                                blnFound = true;
-                                break;
-                            }
-                        }
-                        blnInclude = blnInclude && blnFound;
-                    }
-                }
+				if (blnInclude)
+					blnInclude = SelectionShared.RequirementsMet(objXmlSpell, false, _objCharacter);
 
-                if (blnInclude)
+				if (blnInclude)
                 {
-                    if (objXmlSpell["translate"] != null)
-                        nodSpell.Text = objXmlSpell["translate"].InnerText;
-                    else
-                        nodSpell.Text = objXmlSpell["name"].InnerText;
+                    nodSpell.Text = objXmlSpell["translate"]?.InnerText ?? objXmlSpell["name"].InnerText;
                     nodSpell.Tag = objXmlSpell["name"].InnerText;
                     // Check to see if there is already a Category node for the Spell's category.
                     foreach (TreeNode nodCategory in treSpells.Nodes)
@@ -165,7 +148,7 @@ namespace Chummer
                     // Add the Spell to the Category node.
                     nodParent.Nodes.Add(nodSpell);
 
-                    if (_strLimitCategory != "")
+                    if (!string.IsNullOrEmpty(_strLimitCategory))
                         nodParent.Expand();
                 }
             }
@@ -183,9 +166,13 @@ namespace Chummer
 					}
 				}
 			}
+			
+			txtSearch.Enabled = string.IsNullOrEmpty(_strLimitCategory);
 
-			if (_strLimitCategory != "")
-				txtSearch.Enabled = false;
+	        int freeSpells = _objCharacter.ObjImprovementManager.ValueOf(Improvement.ImprovementType.FreeSpells) +
+	                         _objCharacter.ObjImprovementManager.ValueOf(Improvement.ImprovementType.FreeSpellsATT);
+
+            chkFreeBonus.Visible = freeSpells > 0 && freeSpells > _objCharacter.Spells.Count(spell => spell.FreeBonus);
         }
 
         private void treSpells_AfterSelect(object sender, TreeViewEventArgs e)
@@ -198,7 +185,7 @@ namespace Chummer
 
 				string[] strDescriptorsIn = objXmlSpell["descriptor"].InnerText.Split(',');
 				
-				string strDescriptors = "";
+				string strDescriptors = string.Empty;
 				bool blnExtendedFound = false;
 				foreach (string strDescriptor in strDescriptorsIn)
 				{
@@ -248,7 +235,7 @@ namespace Chummer
                     strDescriptors += LanguageManager.Instance.GetString("String_DescAlchemicalPreparation") + ", ";
 
                 // Remove the trailing comma.
-				if (strDescriptors != string.Empty)
+				if (!string.IsNullOrEmpty(strDescriptors))
 					strDescriptors = strDescriptors.Substring(0, strDescriptors.Length - 2);
 				lblDescriptors.Text = strDescriptors;
 
@@ -297,13 +284,16 @@ namespace Chummer
 				switch (objXmlSpell["damage"].InnerText)
 				{
 					case "P":
+				        lblDamageLabel.Visible = true;
 						lblDamage.Text = LanguageManager.Instance.GetString("String_DamagePhysical");
 						break;
 					case "S":
+                        lblDamageLabel.Visible = true;
 						lblDamage.Text = LanguageManager.Instance.GetString("String_DamageStun");
 						break;
 					default:
-						lblDamage.Text = "";
+                        lblDamageLabel.Visible = false;
+                        lblDamage.Text = string.Empty;
 						break;
 				}
 
@@ -320,13 +310,13 @@ namespace Chummer
 					int intPos = strDV.IndexOf(')') + 1;
 					string strAfter = strDV.Substring(intPos, strDV.Length - intPos);
 					strDV = strDV.Remove(intPos, strDV.Length - intPos);
-					if (strAfter == string.Empty)
+					if (string.IsNullOrEmpty(strAfter))
 						strAfter = "+2";
 					else
 					{
 						int intValue = Convert.ToInt32(strAfter) + 2;
 						if (intValue == 0)
-							strAfter = "";
+							strAfter = string.Empty;
 						else if (intValue > 0)
 							strAfter = "+" + intValue.ToString();
 						else
@@ -399,7 +389,6 @@ namespace Chummer
 					int intSpellCount = 0;
 					int intRitualCount = 0;
 					int intAlchPrepCount = 0;
-					int intSpellLimit = 0;
 
 					foreach (Spell objspell in _objCharacter.Spells)
 					{
@@ -412,34 +401,34 @@ namespace Chummer
 					}
 					if (!_objCharacter.IgnoreRules)
 					{
-						intSpellLimit = (_objCharacter.MAG.TotalValue * 2);
+						int intSpellLimit = (_objCharacter.MAG.TotalValue * 2);
 						if (chkAlchemical.Checked && (intAlchPrepCount >= intSpellLimit) && !_objCharacter.Created)
 						{
 
 							MessageBox.Show(LanguageManager.Instance.GetString("Message_SpellLimit"), LanguageManager.Instance.GetString("MessageTitle_SpellLimit"), MessageBoxButtons.OK, MessageBoxIcon.Information);
 							return;
 						}
-						else if (objXmlSpell["category"].InnerText == "Rituals" && (intRitualCount >= intSpellLimit) && !_objCharacter.Created)
+						if (objXmlSpell["category"].InnerText == "Rituals" && (intRitualCount >= intSpellLimit) && !_objCharacter.Created)
 						{
 							MessageBox.Show(LanguageManager.Instance.GetString("Message_SpellLimit"), LanguageManager.Instance.GetString("MessageTitle_SpellLimit"), MessageBoxButtons.OK, MessageBoxIcon.Information);
 							return;
 						}
-						else if (intSpellCount >= intSpellLimit && !_objCharacter.Created)
+						if (intSpellCount >= intSpellLimit && !_objCharacter.Created)
 						{
 							MessageBox.Show(LanguageManager.Instance.GetString("Message_SpellLimit"),
 								LanguageManager.Instance.GetString("MessageTitle_SpellLimit"), MessageBoxButtons.OK, MessageBoxIcon.Information);
 							return;
 
 						}
-					}
+						if (!SelectionShared.RequirementsMet(objXmlSpell, true, _objCharacter, null, null, _objXmlDocument, "", LanguageManager.Instance.GetString("String_DescSpell")))
+                        {
+                            return;
+                        }
+                    }
 				}
-				try
-				{
-					if (treSpells.SelectedNode.Level > 0)
-						AcceptForm();
-				}
-				catch
-				{
+				if (treSpells.SelectedNode != null && treSpells.SelectedNode.Level > 0)
+				{				    
+				    AcceptForm();
 				}
 			}
 		}
@@ -448,7 +437,7 @@ namespace Chummer
         {
 	        if (treSpells.SelectedNode.Level > 0)
 	        {
-				this.ExpandedCategories = null;
+				ExpandedCategories = null;
 		        cmdOK_Click(sender, e);
 	        }
 		}
@@ -456,12 +445,12 @@ namespace Chummer
         private void cmdCancel_Click(object sender, EventArgs e)
         {
 			_lstExpandCategories = null;
-			this.DialogResult = DialogResult.Cancel;
+			DialogResult = DialogResult.Cancel;
         }
 
 		private void txtSearch_TextChanged(object sender, EventArgs e)
 		{
-			string strAdditionalFilter = "";
+			string strAdditionalFilter = string.Empty;
 			if (_objCharacter.Options.ExtendAnyDetectionSpell)
 				strAdditionalFilter = " and ((not(contains(name, \", Extended\"))))";
 			
@@ -474,14 +463,11 @@ namespace Chummer
 			XmlNodeList objXmlNodeList = _objXmlDocument.SelectNodes("/chummer/categories/category");
 			foreach (XmlNode objXmlCategory in objXmlNodeList)
 			{
-				if (_strLimitCategory == "" || _strLimitCategory == objXmlCategory.InnerText)
+				if (string.IsNullOrEmpty(_strLimitCategory) || _strLimitCategory == objXmlCategory.InnerText)
 				{
 					TreeNode nodCategory = new TreeNode();
 					nodCategory.Tag = objXmlCategory.InnerText;
-					if (objXmlCategory.Attributes["translate"] != null)
-						nodCategory.Text = objXmlCategory.Attributes["translate"].InnerText;
-					else
-						nodCategory.Text = objXmlCategory.InnerText;
+					nodCategory.Text = objXmlCategory.Attributes["translate"]?.InnerText ?? objXmlCategory.InnerText;
 
 					treSpells.Nodes.Add(nodCategory);
 				}
@@ -497,15 +483,11 @@ namespace Chummer
 
                 if (_objCharacter.AdeptEnabled && !_objCharacter.MagicianEnabled)
                 {
-                    if (objXmlSpell["descriptor"].InnerText.Contains("Adept"))
-                        blnInclude = true;
-                }
+					blnInclude = objXmlSpell["descriptor"].InnerText.Contains("Adept");
+				}
                 else if (!_objCharacter.AdeptEnabled)
                 {
-                    if (objXmlSpell["descriptor"].InnerText.Contains("Adept"))
-                        blnInclude = false;
-                    else
-                        blnInclude = true;
+                    blnInclude = !objXmlSpell["descriptor"].InnerText.Contains("Adept");
                 }
                 else
                     blnInclude = true;
@@ -514,10 +496,7 @@ namespace Chummer
                 {
                     TreeNode nodSpell = new TreeNode();
                     TreeNode nodParent = new TreeNode();
-                    if (objXmlSpell["translate"] != null)
-                        nodSpell.Text = objXmlSpell["translate"].InnerText;
-                    else
-                        nodSpell.Text = objXmlSpell["name"].InnerText;
+                    nodSpell.Text = objXmlSpell["translate"]?.InnerText ?? objXmlSpell["name"].InnerText;
                     nodSpell.Tag = objXmlSpell["name"].InnerText;
                     // Check to see if there is already a Category node for the Spell's category.
                     foreach (TreeNode nodCategory in treSpells.Nodes)
@@ -543,6 +522,10 @@ namespace Chummer
 
 			foreach (TreeNode nodNode in lstRemove)
 				treSpells.Nodes.Remove(nodNode);
+		    if (treSpells.Nodes.Count > 0)
+		    {
+		        treSpells.SelectedNode = treSpells.Nodes[0];
+		    }
 		}
 
 		private void cmdOKAdd_Click(object sender, EventArgs e)
@@ -556,7 +539,7 @@ namespace Chummer
 					_lstExpandCategories.Add(objNode);
 				}
 			}
-			this.ExpandedCategories = _lstExpandCategories;
+			ExpandedCategories = _lstExpandCategories;
 			cmdOK_Click(sender, e);
 		}
 
@@ -569,26 +552,20 @@ namespace Chummer
 			}
 			if (e.KeyCode == Keys.Down)
 			{
-				try
-				{
+                if (treSpells.SelectedNode != null)
+                {
 					treSpells.SelectedNode = treSpells.SelectedNode.NextVisibleNode;
 					if (treSpells.SelectedNode == null)
 						treSpells.SelectedNode = treSpells.Nodes[0];
 				}
-				catch
-				{
-				}
 			}
 			if (e.KeyCode == Keys.Up)
 			{
-				try
-				{
+                if (treSpells.SelectedNode != null)
+                {
 					treSpells.SelectedNode = treSpells.SelectedNode.PrevVisibleNode;
-					if (treSpells.SelectedNode == null)
+					if (treSpells.SelectedNode == null && treSpells.Nodes.Count > 0)
 						treSpells.SelectedNode = treSpells.Nodes[treSpells.Nodes.Count - 1].LastNode;
-				}
-				catch
-				{
 				}
 			}
 		}
@@ -693,19 +670,35 @@ namespace Chummer
                 return _strSelectedSpell;
             }
         }
+
+	    public bool IgnoreRequirements
+	    {
+		    get
+		    {
+			    return _blnIgnoreRequirements;
+		    }
+		    set
+		    {
+			    _blnIgnoreRequirements = value;
+		    }
+
+		}
+
+		public bool FreeBonus { get; set; }
 		#endregion
 
 		#region Methods
 		/// <summary>
 		/// Accept the selected item and close the form.
 		/// </summary>
-        private void AcceptForm()
+		private void AcceptForm()
         {
 			_strSelectedSpell = treSpells.SelectedNode.Tag.ToString();
-			this.DialogResult = DialogResult.OK;
+	        FreeBonus = chkFreeBonus.Checked;
+			DialogResult = DialogResult.OK;
 		}
 
-		private void MoveControls()
+	    private void MoveControls()
 		{
 			int intWidth = Math.Max(lblDescriptorsLabel.Width, lblTypeLabel.Width);
 			intWidth = Math.Max(intWidth, lblTypeLabel.Width);
@@ -776,8 +769,7 @@ namespace Chummer
 
         private void lblSource_Click(object sender, EventArgs e)
         {
-            CommonFunctions objCommon = new CommonFunctions(_objCharacter);
-            objCommon.OpenPDF(lblSource.Text);
+            CommonFunctions.StaticOpenPDF(lblSource.Text, _objCharacter);
         }
 	}
 }

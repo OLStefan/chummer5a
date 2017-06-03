@@ -1,4 +1,4 @@
-/*  This file is part of Chummer5a.
+﻿/*  This file is part of Chummer5a.
  *
  *  Chummer5a is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,18 +16,19 @@
  *  You can obtain the full source code for Chummer5a at
  *  https://github.com/chummer5a/chummer5a
  */
-﻿using System;
+ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
+ using Chummer.Backend.Equipment;
 
 namespace Chummer
 {
 	public partial class frmSelectCyberwareSuite : Form
 	{
-		private string _strSelectedSuite = "";
+		private string _strSelectedSuite = string.Empty;
 		private double _dblCharacterESSModifier = 1.0;
 		private Improvement.ImprovementSource _objSource = Improvement.ImprovementSource.Cyberware;
 		private string _strType = "cyberware";
@@ -50,7 +51,7 @@ namespace Chummer
 			else
 			{
 				_strType = "bioware";
-				this.Text = LanguageManager.Instance.GetString("Title_SelectBiowareSuite");
+				Text = LanguageManager.Instance.GetString("Title_SelectBiowareSuite");
 				lblCyberwareLabel.Text = LanguageManager.Instance.GetString("Label_SelectBiowareSuite_PartsInSuite");
 			}
 
@@ -59,32 +60,35 @@ namespace Chummer
 
 		private void cmdOK_Click(object sender, EventArgs e)
 		{
-			if (lstCyberware.Text != "")
+			if (!string.IsNullOrEmpty(lstCyberware.Text))
 				AcceptForm();
 		}
 
 		private void cmdCancel_Click(object sender, EventArgs e)
 		{
-			this.DialogResult = DialogResult.Cancel;
+			DialogResult = DialogResult.Cancel;
 		}
 
 		private void lstCyberware_DoubleClick(object sender, EventArgs e)
 		{
-			if (lstCyberware.Text != "")
+			if (!string.IsNullOrEmpty(lstCyberware.Text))
 				AcceptForm();
 		}
 
 		private void frmSelectCyberwareSuite_Load(object sender, EventArgs e)
 		{
-			foreach (Label objLabel in this.Controls.OfType<Label>())
+            foreach (Label objLabel in Controls.OfType<Label>())
 			{
 				if (objLabel.Text.StartsWith("["))
-					objLabel.Text = "";
+					objLabel.Text = string.Empty;
 			}
 
 			_objXmlDocument = XmlManager.Instance.Load(_strType + ".xml");
 
-			XmlNodeList objXmlSuiteList = _objXmlDocument.SelectNodes("/chummer/suites/suite");
+            if (_objCharacter.DEPEnabled)
+                return;
+
+            XmlNodeList objXmlSuiteList = _objXmlDocument.SelectNodes("/chummer/suites/suite");
 
 			foreach (XmlNode objXmlSuite in objXmlSuiteList)
 			{
@@ -94,7 +98,7 @@ namespace Chummer
 
 		private void lstCyberware_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			if (lstCyberware.Text == "")
+			if (string.IsNullOrEmpty(lstCyberware.Text))
 				return;
 
 			_lstCyberware.Clear();
@@ -109,7 +113,7 @@ namespace Chummer
 			XmlNode objXmlGrade = _objXmlDocument.SelectSingleNode("/chummer/grades/grade[name = \"" + CyberwareGradeName(objXmlSuite["grade"].InnerText) + "\"]");
 
 			XPathNavigator nav = _objXmlDocument.CreateNavigator();
-			lblCyberware.Text = "";
+			lblCyberware.Text = string.Empty;
 
 			Grade objGrade = new Cyberware(_objCharacter).ConvertToCyberwareGrade(objXmlGrade["name"].InnerText, _objSource);
 			ParseNode(objXmlSuite, objGrade, null);
@@ -120,8 +124,8 @@ namespace Chummer
 				decTotalESS += objCyberware.CalculatedESS;
 			}
 
-			lblEssence.Text = Math.Round(decTotalESS, _objCharacter.Options.EssenceDecimals).ToString();
-			lblCost.Text = String.Format("{0:###,###,##0¥}", intTotalCost);
+			lblEssence.Text = Math.Round(decTotalESS, _objCharacter.Options.EssenceDecimals).ToString(GlobalOptions.CultureInfo);
+			lblCost.Text = $"{intTotalCost:###,###,##0¥}";
 			_intCost = intTotalCost;
 		}
 		#endregion
@@ -168,7 +172,7 @@ namespace Chummer
 		private void AcceptForm()
 		{
 			_strSelectedSuite = lstCyberware.Text;
-			this.DialogResult = DialogResult.OK;
+			DialogResult = DialogResult.OK;
 		}
 
 		/// <summary>
@@ -233,8 +237,10 @@ namespace Chummer
 				TreeNode objTreeNode = new TreeNode();
 				List<Weapon> lstWeapons = new List<Weapon>();
 				List<TreeNode> lstWeaponNodes = new List<TreeNode>();
-				Cyberware objCyberware = new Cyberware(_objCharacter);
-				objCyberware.Create(objXmlCyberware, _objCharacter, objGrade, _objSource, intRating, objTreeNode, lstWeapons, lstWeaponNodes, false, false);
+                List<Vehicle> objVehicles = new List<Vehicle>();
+                List<TreeNode> objVehicleNodes = new List<TreeNode>();
+                Cyberware objCyberware = new Cyberware(_objCharacter);
+				objCyberware.Create(objXmlCyberware, _objCharacter, objGrade, _objSource, intRating, objTreeNode, lstWeapons, lstWeaponNodes, objVehicles, objVehicleNodes, false, false);
 				objCyberware.Suite = true;
 
 				if (objParent == null)
@@ -253,7 +259,7 @@ namespace Chummer
 		/// <param name="intDepth">Current dept in the list to determine how many spaces to print.</param>
 		private void WriteList(Cyberware objCyberware, int intDepth)
 		{
-			string strSpace = "";
+			string strSpace = string.Empty;
 			for (int i = 0; i <= intDepth; i++)
 				strSpace += "   ";
 				

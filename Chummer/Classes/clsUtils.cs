@@ -19,7 +19,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
+﻿using System.IO;
+﻿using System.Linq;
+﻿using System.Net;
+﻿using System.Reflection;
+﻿using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
@@ -33,25 +37,24 @@ namespace Chummer
 		public static bool TryFloat(string number, out float parsed, Dictionary<string, float> keywords )
 		{
 			//parse to base math string
-			try
-			{
-				Regex regex = new Regex(String.Join("|", keywords.Keys));
-				number = regex.Replace(number, m => keywords[m.Value].ToString(System.Globalization.CultureInfo.InvariantCulture));
+			Regex regex = new Regex(string.Join("|", keywords.Keys));
+			number = regex.Replace(number, m => keywords[m.Value].ToString(GlobalOptions.InvariantCultureInfo));
 
-				XmlDocument objXmlDocument = new XmlDocument();
-				XPathNavigator nav = objXmlDocument.CreateNavigator();
-				XPathExpression xprValue = nav.Compile(number);
-
-				// Treat this as a decimal value so any fractions can be rounded down. This is currently only used by the Boosted Reflexes Cyberware from SR2050.
-				if (float.TryParse(nav.Evaluate(xprValue).ToString(), out parsed))
-				{
-					return true;
-				}
-			}
-			catch (Exception ex)
-			{	
-				Log.Exception(ex);
-			}
+			XmlDocument objXmlDocument = new XmlDocument();
+			XPathNavigator nav = objXmlDocument.CreateNavigator();
+		    try
+            {
+                XPathExpression xprValue = nav.Compile(number);
+                // Treat this as a decimal value so any fractions can be rounded down. This is currently only used by the Boosted Reflexes Cyberware from SR2050.
+                if (float.TryParse(nav.Evaluate(xprValue)?.ToString(), out parsed))
+                {
+                    return true;
+                }
+            }
+            catch (XPathException ex)
+            {
+                Log.Exception(ex);
+            }
 
 			parsed = 0;
 			return false;
@@ -61,8 +64,79 @@ namespace Chummer
 		{
 			if (Debugger.IsAttached)
 				Debugger.Break();
-			
 		}
 
+		public static bool IsRunningInVisualStudio()
+		{
+			return Process.GetCurrentProcess().ProcessName == "devenv";
+		}
+
+		public static Version GitVersion()
+		{
+			Version verLatestVersion = new Version();
+			HttpWebRequest request = (HttpWebRequest)WebRequest.Create("https://api.github.com/repos/chummer5a/chummer5a/releases/latest");
+			request.UserAgent = "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)";
+			request.Accept = "application/json";
+			// Get the response.
+
+			HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+
+			// Get the stream containing content returned by the server.
+			Stream dataStream = response.GetResponseStream();
+			// Open the stream using a StreamReader for easy access.
+			StreamReader reader = new StreamReader(dataStream);
+			// Read the content.
+
+			string responseFromServer = reader.ReadToEnd();
+			string[] stringSeparators = { "," };
+			string[] result = responseFromServer.Split(stringSeparators, StringSplitOptions.RemoveEmptyEntries);
+
+			foreach (string line in result.Where(line => line.Contains("tag_name")))
+			{
+				string strVersion = line.Split(':')[1];
+				strVersion = strVersion.Split('}')[0].Replace("\"", string.Empty);
+				strVersion = strVersion + ".0";
+				Version.TryParse(strVersion, out verLatestVersion);
+				break;
+			}
+			// Cleanup the streams and the response.
+			reader.Close();
+			dataStream.Close();
+			response.Close();
+
+			return verLatestVersion;
+		}
+
+		public static int GitUpdateAvailable()
+		{
+			Version verCurrentversion = Assembly.GetExecutingAssembly().GetName().Version;
+			int intResult = GitVersion().CompareTo(verCurrentversion);
+			return intResult;
+		}
+		
+		public static void RestartApplication(string strText = "Message_Options_Restart")
+		{
+			string text = LanguageManager.Instance.GetString(strText);
+			string caption = LanguageManager.Instance.GetString("MessageTitle_Options_CloseForms");
+
+			if (MessageBox.Show(text, caption, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+				return;
+			// Get the parameters/arguments passed to program if any
+			string arguments = string.Empty;
+			arguments += GlobalOptions.Instance.MainForm.OpenCharacters.Aggregate(arguments, (current, objCharacter) => current + ("\"" + objCharacter.FileName +"\"" + " "));
+			arguments = arguments.Trim();
+			// Restart current application, with same arguments/parameters
+			foreach (Form objForm in GlobalOptions.Instance.MainForm.MdiChildren)
+			{
+				objForm.Close();
+			}
+			ProcessStartInfo startInfo = new ProcessStartInfo
+			{
+				FileName = Application.StartupPath + "\\Chummer5.exe",
+				Arguments = arguments
+			};
+			Application.Exit();
+			Process.Start(startInfo);
+		}
 	}
 }
